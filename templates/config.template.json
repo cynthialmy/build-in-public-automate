@@ -1,0 +1,6 @@
+{
+  "projectName": "{{ project_name }}",
+  "platforms": {},
+  "postsDir": ".buildpublic/posts",
+  "capturesDir": ".buildpublic/captures"
+}

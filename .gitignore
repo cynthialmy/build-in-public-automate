@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.js.map
+.env
+.env.local
+
+# bip local data (generated in developer projects)
+.buildpublic/config.json
+.buildpublic/captures/
