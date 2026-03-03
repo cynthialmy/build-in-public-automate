@@ -61,11 +61,18 @@ async function authX(): Promise<void> {
   const accessToken = await input({ message: 'Access Token:' });
   const accessSecret = await password({ message: 'Access Token Secret:' });
 
-  const creds = { appKey, appSecret, accessToken, accessSecret };
+  console.log(colors.dim('\nOptional: X login credentials for browser fallback (used if API returns 402/403)'));
+  const username = await input({ message: 'X username (or press Enter to skip):', default: '' });
+  const pw = username ? await password({ message: 'X password:' }) : '';
+
+  const creds = {
+    appKey, appSecret, accessToken, accessSecret,
+    ...(username ? { username, password: pw } : {}),
+  };
   setCredentials('x', creds);
   console.log('\nX credentials saved. Verifying...');
 
-  const ok = await verifyX(creds);
+  const ok = await verifyX({ appKey, appSecret, accessToken, accessSecret });
   if (ok) {
     console.log(colors.success('✓ Credentials verified'));
   } else {

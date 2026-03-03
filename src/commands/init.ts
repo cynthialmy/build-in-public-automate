@@ -1,10 +1,10 @@
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'fs';
 import { join } from 'path';
 import { input, checkbox } from '@inquirer/prompts';
-import { writeConfig, ensureDirectories, isInitialized } from '../config/settings.js';
+import { readConfig, writeConfig, ensureDirectories, isInitialized } from '../config/settings.js';
 import type { BipConfig, Platform } from '../config/types.js';
 
-const TEMPLATE_DIR = new URL('../../templates/', import.meta.url).pathname;
+const TEMPLATE_DIR = new URL('../templates/', import.meta.url).pathname;
 
 function getTemplate(name: string): string {
   const path = join(TEMPLATE_DIR, name);
@@ -17,11 +17,20 @@ function getTemplate(name: string): string {
 export async function initCommand(options: { force?: boolean }): Promise<void> {
   const cwd = process.cwd();
 
-  if (isInitialized() && !options.force) {
-    console.error(
-      'bip is already initialized in this project. Use --force to reinitialize.'
-    );
-    process.exit(1);
+  // Read existing config before potentially overwriting it
+  let existingConfig: BipConfig | undefined;
+  if (isInitialized()) {
+    if (!options.force) {
+      console.error(
+        'bip is already initialized in this project. Use --force to reinitialize.'
+      );
+      process.exit(1);
+    }
+    try {
+      existingConfig = readConfig();
+    } catch {
+      // ignore if unreadable
+    }
   }
 
   const projectName = await input({
@@ -42,10 +51,14 @@ export async function initCommand(options: { force?: boolean }): Promise<void> {
   // Create .buildpublic/ structure
   ensureDirectories();
 
-  // Build platforms config — enable selected ones
+  // Build platforms config — enable selected ones, preserving existing credentials
   const platformsConfig: BipConfig['platforms'] = {};
   for (const p of selectedPlatforms) {
-    platformsConfig[p] = { enabled: true };
+    platformsConfig[p] = {
+      enabled: true,
+      // preserve any previously saved credentials
+      ...(existingConfig?.platforms[p] ?? {}),
+    };
   }
 
   // Write config
@@ -77,6 +90,7 @@ export async function initCommand(options: { force?: boolean }): Promise<void> {
     '.buildpublic/config.json',
     '.buildpublic/captures/',
     '.buildpublic/hn-state.json',
+    '.buildpublic/x-state.json',
   ].join('\n');
 
   if (existsSync(gitignorePath)) {
