@@ -5,6 +5,8 @@ export interface XCredentials {
   appSecret: string;
   accessToken: string;
   accessSecret: string;
+  username?: string;   // for browser fallback login
+  password?: string;  // for browser fallback login
 }
 
 export interface LinkedInCredentials {

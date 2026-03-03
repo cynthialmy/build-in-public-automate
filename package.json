@@ -22,14 +22,14 @@
   "homepage": "https://github.com/cynthialmy/build-in-public-automate#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cynthialmy/build-in-public-automate"
+    "url": "git+https://github.com/cynthialmy/build-in-public-automate.git"
   },
   "bugs": {
     "url": "https://github.com/cynthialmy/build-in-public-automate/issues"
   },
   "type": "module",
   "bin": {
-    "bip": "./dist/index.js"
+    "bip": "dist/index.js"
   },
   "files": [
     "dist/",

@@ -1,0 +1,15 @@
+{
+  "id": "draft-2026-03-03T11-42-21",
+  "createdAt": "2026-03-03T11:42:21.371Z",
+  "status": "partial",
+  "postedTo": [],
+  "posts": [
+    {
+      "platform": "x",
+      "variant": 2,
+      "text": "bip is on npm now — a CLI that reads your git history and posts your dev progress to X, LinkedIn, Reddit, and HN automatically.\n\ntwo fixes that nearly blocked launch:\n• wrong template path (`../../` → `../`)\n• `--force` reinit was deleting your auth tokens\n\ntry it: `npx bip init`",
+      "threadParts": []
+    }
+  ],
+  "attachments": []
+}
