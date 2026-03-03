@@ -8,6 +8,8 @@ import { isInitialized, readConfig, postsDir, capturesDir } from '../config/sett
 import { isGitRepo, getContext } from '../ai/git.js';
 import { draft as draftPosts } from '../ai/drafter.js';
 import { captureScreenshot } from '../capture/screenshot.js';
+import { recordVariantChoice, updatePreferences, getPostingHistory } from '../memory/index.js';
+import { checkStaleness } from './evolve.js';
 import type { DraftPost, GitContext, Platform, PlatformPost } from '../config/types.js';
 
 const PLATFORM_LABELS: Record<Platform, string> = {
@@ -61,7 +63,14 @@ function showGitSummary(context: GitContext): void {
   console.log();
 }
 
-async function pickVariant(variants: PlatformPost[]): Promise<PlatformPost | null> {
+interface PickResult {
+  post: PlatformPost;
+  variantChosen: 1 | 2;
+  wasEdited: boolean;
+  aiOriginalText: string;
+}
+
+async function pickVariant(variants: PlatformPost[]): Promise<PickResult | null> {
   const platform = variants[0]?.platform;
   if (!platform) return null;
 
@@ -93,6 +102,7 @@ async function pickVariant(variants: PlatformPost[]): Promise<PlatformPost | nul
   if (choice.startsWith('e')) {
     const idx = parseInt(choice[1], 10) - 1;
     const toEdit = variants[idx];
+    const aiOriginal = toEdit.text;
     const current = toEdit.title
       ? `TITLE: ${toEdit.title}\n\n${toEdit.text}`
       : toEdit.text;
@@ -102,19 +112,35 @@ async function pickVariant(variants: PlatformPost[]): Promise<PlatformPost | nul
       default: current,
     });
 
+    let editedPost: PlatformPost;
     if (toEdit.title && edited.startsWith('TITLE:')) {
       const [titleLine, ...rest] = edited.split('\n');
-      return {
+      editedPost = {
         ...toEdit,
         title: titleLine.replace('TITLE:', '').trim(),
         text: rest.join('\n').trim(),
       };
+    } else {
+      editedPost = { ...toEdit, text: edited.trim() };
     }
-    return { ...toEdit, text: edited.trim() };
+
+    return {
+      post: editedPost,
+      variantChosen: (idx + 1) as 1 | 2,
+      wasEdited: true,
+      aiOriginalText: aiOriginal,
+    };
   }
 
-  const picked = variants[parseInt(choice, 10) - 1];
-  return picked ?? null;
+  const idx = parseInt(choice, 10) - 1;
+  const picked = variants[idx];
+  if (!picked) return null;
+  return {
+    post: picked,
+    variantChosen: (idx + 1) as 1 | 2,
+    wasEdited: false,
+    aiOriginalText: picked.text,
+  };
 }
 
 export async function draftCommand(options: { platforms?: string }): Promise<void> {
@@ -160,6 +186,12 @@ export async function draftCommand(options: { platforms?: string }): Promise<voi
     throw err;
   }
 
+  // Check BUILD_IN_PUBLIC.md staleness
+  const staleMessage = checkStaleness();
+  if (staleMessage) {
+    console.log(colors.warn(`  ${staleMessage}`));
+  }
+
   // Show git summary and confirm
   showGitSummary(context);
   const proceed = await confirm({
@@ -181,8 +213,16 @@ export async function draftCommand(options: { platforms?: string }): Promise<voi
     throw err;
   }
 
+  // Build a commit summary for memory recording
+  const commitSummary = context.commits
+    .slice(0, 3)
+    .map((c) => c.split(' ').slice(2).join(' '))
+    .join('; ')
+    .slice(0, 120);
+
   // Variant picker per platform
   const accepted: PlatformPost[] = [];
+  const pickResults: PickResult[] = [];
   for (const variants of variantGroups) {
     if (variants.length === 0) continue;
     if (variants.length === 1) {
@@ -195,10 +235,21 @@ export async function draftCommand(options: { platforms?: string }): Promise<voi
           { name: 'Skip', value: 'skip' },
         ],
       });
-      if (action === 'accept') accepted.push(variants[0]);
+      if (action === 'accept') {
+        accepted.push(variants[0]);
+        pickResults.push({
+          post: variants[0],
+          variantChosen: 1,
+          wasEdited: false,
+          aiOriginalText: variants[0].text,
+        });
+      }
     } else {
-      const picked = await pickVariant(variants);
-      if (picked) accepted.push(picked);
+      const result = await pickVariant(variants);
+      if (result) {
+        accepted.push(result.post);
+        pickResults.push(result);
+      }
     }
     console.log();
   }
@@ -245,6 +296,25 @@ export async function draftCommand(options: { platforms?: string }): Promise<voi
 
   const draftPath = join(postsDir(), `${draftId}.json`);
   writeFileSync(draftPath, JSON.stringify(draftPost, null, 2), 'utf-8');
+
+  // Record variant choices in memory
+  for (const result of pickResults) {
+    recordVariantChoice({
+      draftId,
+      platform: result.post.platform,
+      variantChosen: result.variantChosen,
+      wasEdited: result.wasEdited,
+      aiGeneratedText: result.aiOriginalText,
+      userFinalText: result.post.text,
+      commitSummary,
+    });
+  }
+
+  // Update preferences every 5th draft
+  const history = getPostingHistory();
+  if (history.length > 0 && history.length % 5 === 0) {
+    updatePreferences();
+  }
 
   console.log(`\nDraft saved: ${chalk.green(draftPath)}`);
   console.log(`\nRun ${chalk.cyan('bip post')} to publish.`);

@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { colors } from '../core/branding.js';
 import { isInitialized, postsDir } from '../config/settings.js';
+import { recordPostResult } from '../memory/index.js';
 import type { DraftPost, Platform, PlatformPost } from '../config/types.js';
 import { TwitterPlatform } from '../platforms/twitter.js';
 import { LinkedInPlatform } from '../platforms/linkedin.js';
@@ -166,8 +167,10 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
         `Posted to ${post.platform}${result.url ? ': ' + chalk.underline(result.url) : ''}`
       );
       draft.postedTo.push(post.platform);
+      recordPostResult(draft.id, post.platform, true);
     } else {
       spinner.fail(`Failed to post to ${post.platform}: ${result.error}`);
+      recordPostResult(draft.id, post.platform, false);
     }
   }
 
