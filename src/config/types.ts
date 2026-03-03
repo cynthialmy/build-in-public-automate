@@ -85,3 +85,27 @@ export interface PostPreferences {
   includeScreenshot: boolean;
   screenshotUrl?: string;
 }
+
+export interface PostingRecord {
+  draftId: string;
+  createdAt: string;
+  platform: Platform;
+  variantChosen: 1 | 2;
+  wasEdited: boolean;
+  editDiff?: {
+    aiGenerated: string;   // first 200 chars of AI version
+    userFinal: string;     // first 200 chars of user-edited version
+  };
+  textPreview: string;     // first 120 chars of final text
+  commitSummary: string;   // one-line summary of what commits covered
+  postedSuccessfully: boolean;
+}
+
+export interface PostingPreferences {
+  totalDrafts: number;
+  variantPreferences: Record<Platform, { variant1: number; variant2: number }>;
+  editRate: number;        // 0-1
+  recentTopics: string[];  // extracted from commitSummary, last 10
+  commonEdits: string[];   // patterns detected in editDiffs
+  lastUpdated: string;
+}

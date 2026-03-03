@@ -1,7 +1,7 @@
-import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, appendFileSync, mkdirSync, copyFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { input, checkbox } from '@inquirer/prompts';
-import { readConfig, writeConfig, ensureDirectories, isInitialized } from '../config/settings.js';
+import { readConfig, writeConfig, ensureDirectories, isInitialized, skillsDir, soulPath } from '../config/settings.js';
 import type { BipConfig, Platform } from '../config/types.js';
 
 const TEMPLATE_DIR = new URL('../templates/', import.meta.url).pathname;
@@ -82,6 +82,30 @@ export async function initCommand(options: { force?: boolean }): Promise<void> {
     console.log('  Created BUILD_IN_PUBLIC.md');
   }
 
+  // Scaffold soul.md
+  const soulDest = soulPath();
+  if (!existsSync(soulDest) || options.force) {
+    const soulTemplate = getTemplate('soul.md');
+    writeFileSync(soulDest, soulTemplate, 'utf-8');
+    console.log('  Created soul.md');
+  }
+
+  // Scaffold skills/*.md
+  const skillsTemplateDir = join(TEMPLATE_DIR, 'skills');
+  const destSkillsDir = skillsDir();
+  if (existsSync(skillsTemplateDir)) {
+    const skillFiles = readdirSync(skillsTemplateDir).filter((f) => f.endsWith('.md'));
+    for (const file of skillFiles) {
+      const dest = join(destSkillsDir, file);
+      if (!existsSync(dest) || options.force) {
+        copyFileSync(join(skillsTemplateDir, file), dest);
+      }
+    }
+    if (skillFiles.length > 0) {
+      console.log(`  Created ${skillFiles.length} skill files in .buildpublic/skills/`);
+    }
+  }
+
   // Append to .gitignore
   const gitignorePath = join(cwd, '.gitignore');
   const gitignoreEntries = [
@@ -91,6 +115,7 @@ export async function initCommand(options: { force?: boolean }): Promise<void> {
     '.buildpublic/captures/',
     '.buildpublic/hn-state.json',
     '.buildpublic/x-state.json',
+    '.buildpublic/memory/',
   ].join('\n');
 
   if (existsSync(gitignorePath)) {
@@ -110,6 +135,7 @@ export async function initCommand(options: { force?: boolean }): Promise<void> {
   console.log(`  Enabled platforms: ${enabledList}`);
   console.log('\nNext steps:');
   console.log('  1. Edit BUILD_IN_PUBLIC.md with your project context');
-  console.log('  2. Set up credentials: bip auth x');
-  console.log('  3. Generate a draft: bip draft');
+  console.log('  2. Define your voice: bip soul');
+  console.log('  3. Set up credentials: bip auth x');
+  console.log('  4. Generate a draft: bip draft');
 }

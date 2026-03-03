@@ -21,6 +21,22 @@ export function capturesDir(): string {
   return join(bipDir(), 'captures');
 }
 
+export function skillsDir(): string {
+  return join(bipDir(), 'skills');
+}
+
+export function skillPath(platform: string): string {
+  return join(skillsDir(), `${platform}.md`);
+}
+
+export function soulPath(): string {
+  return join(bipDir(), 'soul.md');
+}
+
+export function memoryDir(): string {
+  return join(bipDir(), 'memory');
+}
+
 export function buildPublicMdPath(): string {
   return join(process.cwd(), 'BUILD_IN_PUBLIC.md');
 }
@@ -32,6 +48,8 @@ export function isInitialized(): boolean {
 export function ensureDirectories(): void {
   mkdirSync(postsDir(), { recursive: true });
   mkdirSync(capturesDir(), { recursive: true });
+  mkdirSync(skillsDir(), { recursive: true });
+  mkdirSync(memoryDir(), { recursive: true });
 }
 
 export function readConfig(): BipConfig {

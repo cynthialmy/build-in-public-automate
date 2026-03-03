@@ -2,24 +2,35 @@ import Anthropic from '@anthropic-ai/sdk';
 import { existsSync, readFileSync } from 'fs';
 import { extname } from 'path';
 import type { GitContext, PlatformPost, Platform } from '../config/types.js';
-import { buildPublicMdPath } from '../config/settings.js';
+import { buildPublicMdPath, soulPath } from '../config/settings.js';
+import { loadSkillsForPlatforms } from '../skills/index.js';
+import { buildMemoryPromptSection } from '../memory/index.js';
 
-const SYSTEM_PROMPT = `You are a "build in public" content strategist embedded in a developer's workflow.
+const BASE_SYSTEM_PROMPT = `You are a "build in public" content strategist embedded in a developer's workflow.
 Transform raw git activity into authentic social media content developers actually want to read.
 Be specific (metrics, file names, actual problems solved). Show the journey, not just results.
-Match each platform's culture precisely. Never write generic filler.
+Match each platform's culture precisely. Never write generic filler.`;
 
-Rules:
-- X posts: max 280 chars each; use threadParts array for longer content
-- LinkedIn: professional tone, 150-300 words, paragraph format
-- Reddit: discussion-oriented, include a title field
-- HackerNews: concise title (max 80 chars), "Ask HN:" format if appropriate
+function buildSystemPrompt(platforms: Platform[]): string {
+  let prompt = BASE_SYSTEM_PROMPT;
 
-Additional guidance:
-- End each post with a natural engagement hook (question, CTA, or invitation to reply)
-- For X, prefer concrete numbers and specifics over vague claims
-- For LinkedIn, open with a hook sentence before the body
-- For Reddit, write as a peer sharing learnings, not a marketer`;
+  // Inject platform skills
+  const skills = loadSkillsForPlatforms(platforms);
+  if (skills) {
+    prompt += skills;
+  }
+
+  // Inject soul/voice
+  const soul = soulPath();
+  if (existsSync(soul)) {
+    const soulContent = readFileSync(soul, 'utf-8').trim();
+    if (soulContent) {
+      prompt += `\n\nThe developer's voice and style (follow closely):\n${soulContent}`;
+    }
+  }
+
+  return prompt;
+}
 
 function getFileTypeBreakdown(changedFiles: string[]): string {
   const counts: Record<string, number> = {};
@@ -42,8 +53,11 @@ function buildUserPrompt(
     .map(([type, msgs]) => `${type}(${msgs.length}): ${msgs.slice(0, 2).join('; ')}`)
     .join('\n');
 
+  const memorySection = buildMemoryPromptSection();
+
   return `Project context from BUILD_IN_PUBLIC.md:
 ${projectDoc}
+${memorySection}
 
 Recent git activity:
 Branch: ${context.branch}  |  ${context.commits.length} commits  |  +${context.linesAdded} -${context.linesRemoved} lines  |  ${context.changedFiles.length} files changed
@@ -91,7 +105,7 @@ export async function draft(
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 4096,
-    system: SYSTEM_PROMPT,
+    system: buildSystemPrompt(platforms),
     messages: [
       {
         role: 'user',

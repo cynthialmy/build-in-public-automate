@@ -7,6 +7,8 @@ import { postCommand } from './commands/post.js';
 import { doctorCommand } from './commands/doctor.js';
 import { statusCommand } from './commands/status.js';
 import { historyCommand } from './commands/history.js';
+import { soulCommand, soulEvolveCommand } from './commands/soul.js';
+import { evolveCommand } from './commands/evolve.js';
 import {
   captureScreenshotCommand,
   captureRecordCommand,
@@ -73,6 +75,27 @@ program
   .description('Show past drafts with content previews')
   .option('--limit <n>', 'Number of drafts to show', '10')
   .action((options: { limit?: string }) => historyCommand(options));
+
+// bip soul
+const soul = program
+  .command('soul')
+  .description('Define your posting voice and personality');
+
+soul
+  .command('init', { isDefault: true })
+  .description('Interactive questionnaire to create or re-do soul.md')
+  .action(() => soulCommand());
+
+soul
+  .command('evolve')
+  .description('Analyze your posting patterns and suggest soul.md refinements')
+  .action(() => soulEvolveCommand());
+
+// bip evolve
+program
+  .command('evolve')
+  .description('Update BUILD_IN_PUBLIC.md based on recent project activity')
+  .action(() => evolveCommand());
 
 // bip capture
 const capture = program
