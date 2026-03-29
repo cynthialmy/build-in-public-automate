@@ -149,8 +149,8 @@ export async function draftCommand(options: { platforms?: string }): Promise<voi
     process.exit(1);
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY environment variable is not set.');
+  if (!process.env.GLM_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+    console.error('API key not set. Set either GLM_API_KEY or ANTHROPIC_API_KEY environment variable.');
     process.exit(1);
   }
 

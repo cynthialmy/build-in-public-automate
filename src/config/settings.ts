@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import type { BipConfig } from './types.js';
 
-const BIP_DIR = '.buildpublic';
+const BIP_DIR = process.env.BIP_TEST_DIR || '.buildpublic';
 const CONFIG_FILE = 'config.json';
 
 function bipDir(): string {

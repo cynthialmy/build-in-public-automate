@@ -1,4 +1,8 @@
+import { config as loadEnv } from 'dotenv';
+import { resolve } from 'node:path';
 import { program } from 'commander';
+
+loadEnv({ path: resolve(process.cwd(), '.env') });
 import { createRequire } from 'module';
 import { initCommand } from './commands/init.js';
 import { authCommand } from './commands/auth.js';

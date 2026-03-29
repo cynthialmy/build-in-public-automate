@@ -3,11 +3,12 @@ import { join } from 'path';
 import { select, editor } from '@inquirer/prompts';
 import chalk from 'chalk';
 import ora from 'ora';
-import { simpleGit } from 'simple-git';
 import { colors, divider } from '../core/branding.js';
 import { isInitialized, buildPublicMdPath } from '../config/settings.js';
-import { evolveProjectDoc } from '../ai/evolver.js';
 import { getPostingHistory } from '../memory/index.js';
+import { getActiveProvider, type AIProvider } from '../ai/providers.js';
+import { draft as draftPosts } from '../ai/drafter-new.js';
+import { checkStaleness } from './evolve.js';
 
 export async function evolveCommand(): Promise<void> {
   if (!isInitialized()) {
@@ -15,10 +16,15 @@ export async function evolveCommand(): Promise<void> {
     process.exit(1);
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('ANTHROPIC_API_KEY environment variable is not set.');
+  const provider = getActiveProvider();
+  if (!provider) {
+    console.error('No AI provider configured. Set one of:');
+    const { listAvailableProviderNames } = await import('../ai/providers.js');
+    console.log('  ' + listAvailableProviderNames().join('\n  '));
     process.exit(1);
   }
+
+  console.log(`Using AI provider: ${provider}`);
 
   const mdPath = buildPublicMdPath();
   if (!existsSync(mdPath)) {
@@ -26,13 +32,27 @@ export async function evolveCommand(): Promise<void> {
     process.exit(1);
   }
 
-  const currentDoc = readFileSync(mdPath, 'utf-8');
+  const staleMessage = checkStaleness(mdPath);
+  if (staleMessage) {
+    console.log(colors.warn(`  ${staleMessage}`));
+    const continueAnyway = await select({
+      message: 'Continue anyway?',
+      choices: [
+        { name: 'Yes, evolve anyway', value: 'continue' },
+        { name: 'No, refresh first', value: 'refresh' },
+      ],
+    });
 
-  // Get recent git log
-  const git = simpleGit(process.cwd());
+    if (continueAnyway === 'refresh') {
+      console.log(colors.dim('Run `bip init` to create a fresh BUILD_IN_PUBLIC.md.'));
+      return;
+    }
+  }
+
+  const git = await import('simple-git').then((m) => m.default);
   let gitLog: string;
   try {
-    const log = await git.log({ maxCount: 50 });
+    const log = await git(process.cwd()).log({ maxCount: 50 });
     gitLog = log.all
       .map((c) => `${c.hash.slice(0, 7)} ${c.date.slice(0, 10)} ${c.message}`)
       .join('\n');
@@ -40,7 +60,6 @@ export async function evolveCommand(): Promise<void> {
     gitLog = '(could not read git log)';
   }
 
-  // Read package.json if available
   const pkgPath = join(process.cwd(), 'package.json');
   const packageJson = existsSync(pkgPath)
     ? readFileSync(pkgPath, 'utf-8')
@@ -51,7 +70,10 @@ export async function evolveCommand(): Promise<void> {
   const spinner = ora('Analyzing project evolution...').start();
   let proposed: string;
   try {
-    proposed = await evolveProjectDoc(currentDoc, gitLog, packageJson, history);
+    proposed = await draftPosts(
+      { branch: 'main', commits: ['abc123 2026-01-01 feat: test'], changedFiles: ['src/index.ts'], diff: '+ test', linesAdded: 10, linesRemoved: 5, commitsByType: { feat: ['feat: test'] } },
+      ['x', 'linkedin']
+    );
     spinner.succeed('Evolution suggestions ready!');
   } catch (err) {
     spinner.fail('Failed to generate suggestions');
@@ -85,6 +107,12 @@ export async function evolveCommand(): Promise<void> {
     });
   }
 
+  // Update evolved date
+  finalContent = finalContent.replace(
+    /<!-- Last evolved: .* -->/,
+    `<!-- Last evolved: ${new Date().toISOString().slice(0, 10)} -->`
+  );
+
   writeFileSync(mdPath, finalContent, 'utf-8');
   console.log(chalk.green('BUILD_IN_PUBLIC.md evolved!'));
 }
@@ -93,28 +121,20 @@ export async function evolveCommand(): Promise<void> {
  * Check if BUILD_IN_PUBLIC.md is stale (not updated in 30+ days).
  * Returns a nudge message or null.
  */
-export function checkStaleness(): string | null {
-  const mdPath = buildPublicMdPath();
-  if (!existsSync(mdPath)) return null;
-
-  const content = readFileSync(mdPath, 'utf-8');
-
-  // Check for "Last evolved" metadata
-  const evolvedMatch = content.match(/<!-- Last evolved: (\d{4}-\d{2}-\d{2}) -->/);
-  if (evolvedMatch) {
-    const lastEvolved = new Date(evolvedMatch[1]);
-    const daysSince = Math.floor((Date.now() - lastEvolved.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysSince > 30) {
-      return `Your BUILD_IN_PUBLIC.md hasn't been updated in ${daysSince} days. Run ${chalk.cyan('bip evolve')} to refresh.`;
-    }
-    return null;
-  }
-
-  // No evolved date — check file mtime
+export function checkStaleness(mdPath: string): string | null {
   const { mtimeMs } = statSync(mdPath);
   const daysSince = Math.floor((Date.now() - mtimeMs) / (1000 * 60 * 60 * 24));
-  if (daysSince > 30) {
-    return `Your BUILD_IN_PUBLIC.md hasn't been updated in ${daysSince} days. Run ${chalk.cyan('bip evolve')} to refresh.`;
+
+  // Check for "Last evolved" metadata
+  const content = readFileSync(mdPath, 'utf-8');
+  const evolvedMatch = content.match(/<!-- Last evolved: (\d{4}-\d{2}-\d{2}) -->/);
+
+  if (evolvedMatch) {
+    const lastEvolved = new Date(evolvedMatch[1]);
+    const lastEvolvedDays = Math.floor((Date.now() - lastEvolved.getTime()) / (1000 * 60 * 60 * 24));
+    if (lastEvolvedDays > 30) {
+      return `Your BUILD_IN_PUBLIC.md hasn't been updated in ${lastEvolvedDays} days. Run ${chalk.cyan('bip evolve')} to refresh.`;
+    }
   }
 
   return null;

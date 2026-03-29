@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { memoryDir } from '../config/settings.js';
 import type { Platform, PostingRecord, PostingPreferences } from '../config/types.js';
@@ -24,6 +24,11 @@ function readHistory(): PostingRecord[] {
 }
 
 function writeHistory(records: PostingRecord[]): void {
+  const dir = memoryDir();
+  // Create directory only if it doesn't exist
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
   writeFileSync(historyPath(), JSON.stringify(records, null, 2), 'utf-8');
 }
 
