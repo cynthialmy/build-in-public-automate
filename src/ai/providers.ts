@@ -43,7 +43,7 @@ export const PROVIDER_ENV_KEYS: Record<AIProvider, string> = {
 export const PROVIDER_DEFAULT_MODELS: Record<AIProvider, string> = {
   anthropic: 'claude-sonnet-4-6',
   openai: 'gpt-4o',
-  google: 'gemini-2.0-flash-exp',
+  google: 'gemini-2.0-flash',
   cohere: 'command-r-plus-08-2024',
   deepseek: 'deepseek-chat',
   qwen: 'qwen2.5-72b-chat',
