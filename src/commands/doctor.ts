@@ -41,11 +41,15 @@ export async function doctorCommand(): Promise<void> {
     fail('.buildpublic/ not initialized', 'bip init');
   }
 
-  // 3. Anthropic API key
-  if (process.env.ANTHROPIC_API_KEY) {
-    ok('ANTHROPIC_API_KEY set');
+  // 3. API key (Anthropic or GLM)
+  if (process.env.ANTHROPIC_API_KEY || process.env.GLM_API_KEY) {
+    const keyType = process.env.GLM_API_KEY ? 'GLM_API_KEY' : 'ANTHROPIC_API_KEY';
+    ok(`${keyType} set`);
   } else {
-    fail('ANTHROPIC_API_KEY not set', 'export ANTHROPIC_API_KEY=sk-ant-...');
+    fail(
+      'API key not set',
+      'export GLM_API_KEY=your-key or export ANTHROPIC_API_KEY=sk-ant-...'
+    );
   }
 
   // 4. Per-platform credentials (only if initialized)

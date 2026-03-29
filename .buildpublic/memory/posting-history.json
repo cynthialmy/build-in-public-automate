@@ -1,0 +1,582 @@
+[
+  {
+    "draftId": "draft-7",
+    "createdAt": "2026-03-29T19:16:46.071Z",
+    "platform": "hackernews",
+    "variantChosen": 2,
+    "wasEdited": false,
+    "textPreview": "Post 7",
+    "commitSummary": "commit 7",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-8",
+    "createdAt": "2026-03-29T19:16:46.074Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post 8",
+    "commitSummary": "commit 8",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-9",
+    "createdAt": "2026-03-29T19:16:46.079Z",
+    "platform": "linkedin",
+    "variantChosen": 2,
+    "wasEdited": true,
+    "textPreview": "Edited 9",
+    "commitSummary": "commit 9",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post 9",
+      "userFinal": "Edited 9"
+    }
+  },
+  {
+    "draftId": "emoji-draft-0",
+    "createdAt": "2026-03-29T19:16:46.083Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Post 0",
+    "commitSummary": "commit 0",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post 0 🚀",
+      "userFinal": "Post 0"
+    }
+  },
+  {
+    "draftId": "emoji-draft-1",
+    "createdAt": "2026-03-29T19:16:46.103Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Post 1",
+    "commitSummary": "commit 1",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post 1 🚀",
+      "userFinal": "Post 1"
+    }
+  },
+  {
+    "draftId": "emoji-draft-2",
+    "createdAt": "2026-03-29T19:16:46.110Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Post 2",
+    "commitSummary": "commit 2",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post 2 🚀",
+      "userFinal": "Post 2"
+    }
+  },
+  {
+    "draftId": "emoji-draft-3",
+    "createdAt": "2026-03-29T19:16:46.116Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Post 3",
+    "commitSummary": "commit 3",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post 3 🚀",
+      "userFinal": "Post 3"
+    }
+  },
+  {
+    "draftId": "emoji-draft-4",
+    "createdAt": "2026-03-29T19:16:46.121Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Post 4",
+    "commitSummary": "commit 4",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post 4 🚀",
+      "userFinal": "Post 4"
+    }
+  },
+  {
+    "draftId": "emoji-draft-5",
+    "createdAt": "2026-03-29T19:16:46.133Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Post 5",
+    "commitSummary": "commit 5",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post 5 🚀",
+      "userFinal": "Post 5"
+    }
+  },
+  {
+    "draftId": "draft-0",
+    "createdAt": "2026-03-29T19:16:46.141Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Edited 0",
+    "commitSummary": "commit 0",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post 0",
+      "userFinal": "Edited 0"
+    }
+  },
+  {
+    "draftId": "draft-1",
+    "createdAt": "2026-03-29T19:16:46.151Z",
+    "platform": "linkedin",
+    "variantChosen": 2,
+    "wasEdited": false,
+    "textPreview": "Post 1",
+    "commitSummary": "commit 1",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-2",
+    "createdAt": "2026-03-29T19:16:46.157Z",
+    "platform": "reddit",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post 2",
+    "commitSummary": "commit 2",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-3",
+    "createdAt": "2026-03-29T19:16:46.162Z",
+    "platform": "hackernews",
+    "variantChosen": 2,
+    "wasEdited": true,
+    "textPreview": "Edited 3",
+    "commitSummary": "commit 3",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post 3",
+      "userFinal": "Edited 3"
+    }
+  },
+  {
+    "draftId": "draft-4",
+    "createdAt": "2026-03-29T19:16:46.167Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post 4",
+    "commitSummary": "commit 4",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-5",
+    "createdAt": "2026-03-29T19:16:46.171Z",
+    "platform": "linkedin",
+    "variantChosen": 2,
+    "wasEdited": false,
+    "textPreview": "Post 5",
+    "commitSummary": "commit 5",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-6",
+    "createdAt": "2026-03-29T19:16:46.178Z",
+    "platform": "reddit",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Edited 6",
+    "commitSummary": "commit 6",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post 6",
+      "userFinal": "Edited 6"
+    }
+  },
+  {
+    "draftId": "draft-7",
+    "createdAt": "2026-03-29T19:16:46.184Z",
+    "platform": "hackernews",
+    "variantChosen": 2,
+    "wasEdited": false,
+    "textPreview": "Post 7",
+    "commitSummary": "commit 7",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-8",
+    "createdAt": "2026-03-29T19:16:46.188Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post 8",
+    "commitSummary": "commit 8",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-9",
+    "createdAt": "2026-03-29T19:16:46.195Z",
+    "platform": "linkedin",
+    "variantChosen": 2,
+    "wasEdited": true,
+    "textPreview": "Edited 9",
+    "commitSummary": "commit 9",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post 9",
+      "userFinal": "Edited 9"
+    }
+  },
+  {
+    "draftId": "test-draft-1",
+    "createdAt": "2026-03-29T19:16:46.213Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "feat: feature",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-0",
+    "createdAt": "2026-03-29T19:16:46.225Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-1",
+    "createdAt": "2026-03-29T19:16:46.236Z",
+    "platform": "x",
+    "variantChosen": 2,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-2",
+    "createdAt": "2026-03-29T19:16:46.241Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-3",
+    "createdAt": "2026-03-29T19:16:46.248Z",
+    "platform": "x",
+    "variantChosen": 2,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-0",
+    "createdAt": "2026-03-29T19:16:46.267Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "Topic 0",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-1",
+    "createdAt": "2026-03-29T19:16:46.279Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "Topic 1",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-2",
+    "createdAt": "2026-03-29T19:16:46.283Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "Topic 2",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-3",
+    "createdAt": "2026-03-29T19:16:46.289Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "Topic 3",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-4",
+    "createdAt": "2026-03-29T19:16:46.294Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "Topic 4",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-0",
+    "createdAt": "2026-03-29T19:16:46.304Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post #hashtag",
+      "userFinal": "Post"
+    }
+  },
+  {
+    "draftId": "draft-1",
+    "createdAt": "2026-03-29T19:16:46.328Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post #hashtag",
+      "userFinal": "Post"
+    }
+  },
+  {
+    "draftId": "draft-2",
+    "createdAt": "2026-03-29T19:16:46.332Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post #hashtag",
+      "userFinal": "Post"
+    }
+  },
+  {
+    "draftId": "draft-3",
+    "createdAt": "2026-03-29T19:16:46.337Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post #hashtag",
+      "userFinal": "Post"
+    }
+  },
+  {
+    "draftId": "draft-4",
+    "createdAt": "2026-03-29T19:16:46.342Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post #hashtag",
+      "userFinal": "Post"
+    }
+  },
+  {
+    "draftId": "draft-5",
+    "createdAt": "2026-03-29T19:16:46.347Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "Post #hashtag",
+      "userFinal": "Post"
+    }
+  },
+  {
+    "draftId": "draft-0",
+    "createdAt": "2026-03-29T19:16:46.358Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Preview text 0",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-1",
+    "createdAt": "2026-03-29T19:16:46.384Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Preview text 1",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-2",
+    "createdAt": "2026-03-29T19:16:46.389Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Preview text 2",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-1",
+    "createdAt": "2026-03-29T19:16:46.406Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "User",
+    "commitSummary": "commit",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "AI",
+      "userFinal": "User"
+    }
+  },
+  {
+    "draftId": "draft-2",
+    "createdAt": "2026-03-29T19:16:46.421Z",
+    "platform": "x",
+    "variantChosen": 2,
+    "wasEdited": false,
+    "textPreview": "User",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-3",
+    "createdAt": "2026-03-29T19:16:46.425Z",
+    "platform": "linkedin",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "User",
+    "commitSummary": "commit",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "AI",
+      "userFinal": "User"
+    }
+  },
+  {
+    "draftId": "draft-1",
+    "createdAt": "2026-03-29T19:16:46.433Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": true,
+    "textPreview": "User edited",
+    "commitSummary": "commit",
+    "postedSuccessfully": false,
+    "editDiff": {
+      "aiGenerated": "AI generated #tag",
+      "userFinal": "User edited"
+    }
+  },
+  {
+    "draftId": "draft-0",
+    "createdAt": "2026-03-29T19:16:46.447Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-1",
+    "createdAt": "2026-03-29T19:16:46.451Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-2",
+    "createdAt": "2026-03-29T19:16:46.470Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-3",
+    "createdAt": "2026-03-29T19:16:46.475Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-4",
+    "createdAt": "2026-03-29T19:16:46.479Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-0",
+    "createdAt": "2026-03-29T19:16:46.488Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-1",
+    "createdAt": "2026-03-29T19:16:46.491Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  },
+  {
+    "draftId": "draft-2",
+    "createdAt": "2026-03-29T19:16:46.496Z",
+    "platform": "x",
+    "variantChosen": 1,
+    "wasEdited": false,
+    "textPreview": "Post",
+    "commitSummary": "commit",
+    "postedSuccessfully": false
+  }
+]
