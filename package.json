@@ -1,6 +1,6 @@
 {
   "name": "build-in-public",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "CLI to automate build-in-public workflows — generate platform-tailored posts from git activity using Claude AI and publish to X, LinkedIn, Reddit, and HackerNews",
   "keywords": [
     "cli",
