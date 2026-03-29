@@ -36,7 +36,9 @@ program
 // bip auth [platform]
 program
   .command('auth [platform]')
-  .description('Set up credentials for a platform (x, linkedin, reddit, hackernews)')
+  .description(
+    'Set up credentials: social platforms (x, linkedin, …) or AI keys (`auth ai`)'
+  )
   .option('--list', 'Show all platform credential statuses')
   .action((platform?: string, options: { list?: boolean } = {}) =>
     authCommand(platform, options)
@@ -50,7 +52,13 @@ program
     '--platforms <platforms>',
     'Comma-separated list of platforms (e.g. x,linkedin)'
   )
-  .action((options: { platforms?: string }) => draftCommand(options));
+  .option(
+    '--provider <id>',
+    'AI provider when multiple API keys exist (e.g. glm, anthropic, openai)'
+  )
+  .action((options: { platforms?: string; provider?: string }) =>
+    draftCommand(options)
+  );
 
 // bip post [platform]
 program
@@ -93,13 +101,21 @@ soul
 soul
   .command('evolve')
   .description('Analyze your posting patterns and suggest soul.md refinements')
-  .action(() => soulEvolveCommand());
+  .option(
+    '--provider <id>',
+    'AI provider when multiple API keys exist (e.g. glm, anthropic)'
+  )
+  .action((options: { provider?: string }) => soulEvolveCommand(options));
 
 // bip evolve
 program
   .command('evolve')
   .description('Update BUILD_IN_PUBLIC.md based on recent project activity')
-  .action(() => evolveCommand());
+  .option(
+    '--provider <id>',
+    'AI provider when multiple API keys exist (e.g. glm, anthropic)'
+  )
+  .action((options: { provider?: string }) => evolveCommand(options));
 
 // bip capture
 const capture = program

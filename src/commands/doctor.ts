@@ -4,6 +4,10 @@ import { isGitRepo } from '../ai/git.js';
 import { isInitialized } from '../config/settings.js';
 import { hasCredentials } from '../config/credentials.js';
 import type { Platform } from '../config/types.js';
+import {
+  listAvailableProviders,
+  PROVIDER_NAMES,
+} from '../ai/providers.js';
 
 const PLATFORMS: Platform[] = ['x', 'linkedin', 'reddit', 'hackernews'];
 const PLATFORM_LABELS: Record<Platform, string> = {
@@ -41,15 +45,14 @@ export async function doctorCommand(): Promise<void> {
     fail('.buildpublic/ not initialized', 'bip init');
   }
 
-  // 3. API key (Anthropic or GLM)
-  if (process.env.ANTHROPIC_API_KEY || process.env.GLM_API_KEY) {
-    const keyType = process.env.GLM_API_KEY ? 'GLM_API_KEY' : 'ANTHROPIC_API_KEY';
-    ok(`${keyType} set`);
-  } else {
-    fail(
-      'API key not set',
-      'export GLM_API_KEY=your-key or export ANTHROPIC_API_KEY=sk-ant-...'
+  // 3. AI API keys (any supported provider)
+  const aiProviders = listAvailableProviders();
+  if (aiProviders.length > 0) {
+    ok(
+      `AI API key set (${aiProviders.map((p) => PROVIDER_NAMES[p]).join(', ')})`
     );
+  } else {
+    fail('No AI API key set', 'bip auth ai');
   }
 
   // 4. Per-platform credentials (only if initialized)

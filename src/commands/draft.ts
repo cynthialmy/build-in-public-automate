@@ -4,7 +4,19 @@ import { select, confirm, editor } from '@inquirer/prompts';
 import ora from 'ora';
 import chalk from 'chalk';
 import { colors, divider } from '../core/branding.js';
-import { isInitialized, readConfig, postsDir, capturesDir } from '../config/settings.js';
+import {
+  isInitialized,
+  readConfig,
+  postsDir,
+  capturesDir,
+  buildPublicMdPath,
+} from '../config/settings.js';
+import {
+  PROVIDER_ENV_KEYS,
+  PROVIDER_NAMES,
+  listAvailableProviders,
+} from '../ai/providers.js';
+import { resolveAiProviderForSession } from '../ai/provider-choice.js';
 import { isGitRepo, getContext } from '../ai/git.js';
 import { draft as draftPosts } from '../ai/drafter.js';
 import { captureScreenshot } from '../capture/screenshot.js';
@@ -143,14 +155,27 @@ async function pickVariant(variants: PlatformPost[]): Promise<PickResult | null>
   };
 }
 
-export async function draftCommand(options: { platforms?: string }): Promise<void> {
+export async function draftCommand(options: {
+  platforms?: string;
+  provider?: string;
+}): Promise<void> {
   if (!isInitialized()) {
     console.error('bip is not initialized. Run `bip init` first.');
     process.exit(1);
   }
 
-  if (!process.env.GLM_API_KEY && !process.env.ANTHROPIC_API_KEY) {
-    console.error('API key not set. Set either GLM_API_KEY or ANTHROPIC_API_KEY environment variable.');
+  if (listAvailableProviders().length === 0) {
+    const keys = Object.values(PROVIDER_ENV_KEYS).join(', ');
+    console.error(`API key not set. Set one of: ${keys}`);
+    process.exit(1);
+  }
+
+  const aiProvider = await resolveAiProviderForSession({
+    cliProvider: options.provider,
+  });
+  if (!aiProvider) {
+    const keys = Object.values(PROVIDER_ENV_KEYS).join(', ');
+    console.error(`API key not set. Set one of: ${keys}`);
     process.exit(1);
   }
 
@@ -187,10 +212,14 @@ export async function draftCommand(options: { platforms?: string }): Promise<voi
   }
 
   // Check BUILD_IN_PUBLIC.md staleness
-  const staleMessage = checkStaleness();
+  const staleMessage = checkStaleness(buildPublicMdPath());
   if (staleMessage) {
     console.log(colors.warn(`  ${staleMessage}`));
   }
+
+  console.log(
+    colors.dim(`  AI provider: ${PROVIDER_NAMES[aiProvider]}`)
+  );
 
   // Show git summary and confirm
   showGitSummary(context);
@@ -203,10 +232,14 @@ export async function draftCommand(options: { platforms?: string }): Promise<voi
     return;
   }
 
-  const genSpinner = ora('Generating posts with Claude...').start();
+  const genSpinner = ora(
+    `Generating posts (${PROVIDER_NAMES[aiProvider]})...`
+  ).start();
   let variantGroups: PlatformPost[][];
   try {
-    variantGroups = await draftPosts(context, platforms);
+    variantGroups = await draftPosts(context, platforms, {
+      provider: aiProvider,
+    });
     genSpinner.succeed('Posts generated!');
   } catch (err) {
     genSpinner.fail('Failed to generate posts');

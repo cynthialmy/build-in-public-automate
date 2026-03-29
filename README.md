@@ -3,24 +3,24 @@
 [![npm](https://img.shields.io/npm/v/build-in-public)](https://www.npmjs.com/package/build-in-public)
 [![license](https://img.shields.io/npm/l/build-in-public)](LICENSE)
 [![node](https://img.shields.io/node/v/build-in-public)](https://nodejs.org)
-[![tests](https://img.shields.io/badge/tests-passing-brightgreen?logo=vitest)](https://vitest.dev)
-[![coverage](https://img.shields.io/badge/coverage-~85%25-brightgreen?logo=vitest)](https://vitest.dev)
+[![vitest](https://img.shields.io/badge/tests-vitest-6E9F18?logo=vitest)](https://vitest.dev)
 
-Share your progress to X, LinkedIn, Reddit, and HackerNews straight from your terminal. `bip` reads your git activity, generates platform-tailored posts with Claude AI, and publishes them via official APIs or browser automation.
+Share your progress to X, LinkedIn, Reddit, and HackerNews from your terminal. `bip` reads your git activity, generates platform-tailored posts with your chosen **LLM provider** (Anthropic, OpenAI, GLM, and others), and publishes via official APIs or browser automation.
 
-Posts get better over time — bip remembers your variant preferences, learns your editing patterns, and adapts its voice to match yours.
+Posts improve over time — bip remembers variant preferences, learns editing patterns, and adapts voice to match yours.
 
 ## Features
 
-- **AI-Powered Content Generation**: Uses Claude (Sonnet 4.6) to create authentic, platform-specific posts
-- **Multi-Platform Support**: X (Twitter), LinkedIn, Reddit, HackerNews with tailored strategies for each
-- **Smart Memory**: Tracks your posting preferences, edit patterns, and avoids repetition
-- **Browser Fallback**: Automatic Playwright automation when APIs aren't available
-- **Voice Customization**: Define your personality with `bip soul` and watch it evolve with `bip soul evolve`
-- **Project Context**: Reads your `BUILD_IN_PUBLIC.md` to make posts specific to your project
-- **Draft Review**: Generate 2 variants per platform, pick/edit, then publish
-- **Capture Tools**: Screenshots and screen recordings of your web app
-- **Comprehensive Testing**: ~190 tests covering all core functionality
+- **Multi-provider AI**: Anthropic (Claude), Zhipu GLM, OpenAI, Google Gemini, Cohere, DeepSeek, Qwen — HTTP-based drafting with a unified prompt pipeline
+- **CLI setup for API keys**: `bip auth ai` writes keys into the project `.env` (see [AI API keys](#ai-api-keys))
+- **Multi-Platform Posting**: X, LinkedIn, Reddit, HackerNews with per-platform strategies
+- **Smart Memory**: Tracks preferences, edit patterns, and avoids repetition
+- **Browser Fallback**: Playwright when APIs fail; HackerNews uses automation (no submit API)
+- **Voice**: `bip soul` and `bip soul evolve` refine `soul.md` from your behavior
+- **Project Context**: `BUILD_IN_PUBLIC.md`, skills, and memory injected into prompts
+- **Draft Review**: Two variants per platform, pick/edit/skip, then save or post
+- **Capture**: Full-page screenshots and browser session recordings
+- **Tests**: Vitest suite under `test/` (see [test/README.md](test/README.md))
 
 ## Install
 
@@ -32,13 +32,15 @@ npm install -g build-in-public
 
 ```bash
 cd your-project
-bip init                              # scaffold config, skills, soul template
-bip soul                              # define your posting voice
-bip auth x                            # set up platform credentials
-GLM_API_KEY=your-key bip draft    # generate posts from git activity (using GLM)
-ANTHROPIC_API_KEY=sk-ant-... bip draft # generate posts from git activity (using Claude)
-bip post                              # publish to platforms
+bip init                    # scaffold config, skills, soul template
+bip soul                    # define your posting voice (optional)
+bip auth ai                 # set LLM API key → writes ./.env (or: bip auth ai glm)
+bip auth x                  # set up social platform credentials (after bip init)
+bip draft                   # generate posts from git activity
+bip post                    # publish to platforms
 ```
+
+Load order: a `.env` file in the **current working directory** is loaded automatically when you run `bip`. You can still use `export ANTHROPIC_API_KEY=...` if you prefer.
 
 ## Usage
 
@@ -87,7 +89,34 @@ Each platform has a strategy file in `.buildpublic/skills/`:
 
 Edit these files to change how bip writes for each platform. They're injected directly into the AI prompt.
 
-### 4. Set Up Platform Credentials
+### 4. AI API keys
+
+`bip draft`, `bip evolve`, and `bip soul evolve` need **at least one** provider key in the environment.
+
+**Recommended — interactive setup** (writes or updates `./.env` in the project root):
+
+```bash
+bip auth ai              # pick provider, paste key
+bip auth ai glm          # set GLM_API_KEY only
+bip auth ai anthropic    # set ANTHROPIC_API_KEY only
+bip auth ai --list       # show which provider env vars are set (masked)
+```
+
+**Environment variables** (any one you configure can be used; see `src/ai/providers.ts` for the full list):
+
+| Provider   | Variable             |
+|-----------|----------------------|
+| Anthropic | `ANTHROPIC_API_KEY`  |
+| OpenAI    | `OPENAI_API_KEY`     |
+| Google    | `GOOGLE_API_KEY`     |
+| Cohere    | `COHERE_API_KEY`     |
+| DeepSeek  | `DEEPSEEK_API_KEY`   |
+| Qwen      | `QWEN_API_KEY`       |
+| GLM       | `GLM_API_KEY`        |
+
+**Multiple keys**: If more than one provider is configured, `bip` prompts you to choose (or use `BIP_AI_PROVIDER=glm`, or `bip draft --provider glm`). You can save a default in `.buildpublic/config.json` as `aiProvider` when prompted.
+
+### 5. Set Up Platform Credentials
 
 ```bash
 bip auth x           # X (Twitter) API keys
@@ -96,6 +125,8 @@ bip auth reddit       # Reddit client ID + secret
 bip auth hackernews   # HN username + password (browser automation only)
 bip auth --list       # check credential status for all platforms
 ```
+
+The main `bip auth` menu also includes **AI / LLM API keys** alongside social platforms.
 
 | Platform | What you need | Where to get it |
 |----------|---------------|----------------|
@@ -112,11 +143,12 @@ Credentials are stored in `.buildpublic/config.json` (automatically gitignored).
 
 ```bash
 bip draft
+bip draft --provider glm   # non-interactive when multiple keys exist
 ```
 
 1. Reads your last 20 commits, changed files, and diff
 2. Shows a git summary — confirm before calling the API
-3. Sends everything to Claude with:
+3. Sends everything to the configured LLM with:
    - `BUILD_IN_PUBLIC.md` context
    - `soul.md` voice
    - Platform `skills`
@@ -143,7 +175,7 @@ Posts via official APIs first (X, LinkedIn, Reddit). Falls back to Playwright br
 bip evolve
 ```
 
-Claude reads your current `BUILD_IN_PUBLIC.md`, recent git log (50 commits), `package.json`, and posting history, then proposes updates section by section:
+The AI reads your current `BUILD_IN_PUBLIC.md`, recent git log (50 commits), `package.json`, and posting history, then proposes updates section by section:
 
 - **Project Description**: Deepens based on what's been shipped
 - **Tech Stack**: Detects new/removed dependencies
@@ -191,9 +223,12 @@ Everything except base instructions is editable by you.
 | Command | Description |
 |---------|-------------|
 | `bip init` | Scaffold config, skills, soul template, and directories |
-| `bip auth <platform>` | Save credentials for x, linkedin, reddit, or hackernews |
-| `bip auth --list` | Show credential status for all platforms |
+| `bip auth` | Interactive menu: AI keys or social platforms |
+| `bip auth ai [provider]` | Save an LLM API key into `.env` (`--list` to show status) |
+| `bip auth <platform>` | Save credentials for `x`, `linkedin`, `reddit`, or `hackernews` |
+| `bip auth --list` | Show credential status for all **social** platforms |
 | `bip draft` | Generate 2 post variants per platform from git activity |
+| `bip draft --provider <id>` | Force provider when multiple API keys exist |
 | `bip post [platform]` | Publish latest draft (optionally to one platform) |
 | `bip post --dry-run` | Preview posts with character counts, no API calls |
 | `bip soul` | Interactive questionnaire to create or redo soul.md |
@@ -211,7 +246,7 @@ Everything except base instructions is editable by you.
 your-project/
 ├── BUILD_IN_PUBLIC.md          # project context (committed)
 └── .buildpublic/
-    ├── config.json             # credentials + settings (gitignored)
+    ├── config.json             # credentials, platforms, optional aiProvider (gitignored)
     ├── soul.md                 # voice / personality (committed)
     ├── skills/                 # platform strategies (committed)
     │   ├── x.md
@@ -252,20 +287,9 @@ npm run test:run
 npm run test:coverage
 ```
 
-See `test/README.md` for comprehensive testing guidelines, including:
+See [test/README.md](test/README.md) for how tests are organized and how to run them.
 
-- Test structure and organization
-- Writing test cases (happy paths, errors, edge cases)
-- Mocking external dependencies
-- Coverage goals and best practices
-- Troubleshooting common issues
-
-**Current test coverage**: ~85% of core functionality with 34 passing tests covering:
-- Configuration management
-- AI operations (git context, drafting, evolution)
-- Memory and preferences
-- Platform skills loading
-- Error handling
+Tests use **Vitest** (`npm test`, `npm run test:run`, `npm run test:coverage`). Layout mirrors `src/` under `test/`.
 
 ### Build
 
@@ -278,10 +302,7 @@ Compiles TypeScript to `dist/index.js` with ESM format, targeting Node 18.
 ## Requirements
 
 - **Node.js**: 18+
-- **API Keys**: Support for both GLM and Anthropic APIs
-  - `GLM_API_KEY`: GLM API key for alternative AI provider
-  - `ANTHROPIC_API_KEY`: Anthropic API key for Claude (default)
-  - Set either: `export GLM_API_KEY=your-key` or `export ANTHROPIC_API_KEY=sk-ant-...`
+- **At least one LLM API key** for draft/evolve flows — see [AI API keys](#4-ai-api-keys). Use `bip auth ai` or set the corresponding env vars manually.
 
 ## Architecture
 
@@ -290,7 +311,8 @@ src/
 ├── index.ts                 # CLI entry (Commander.js)
 ├── commands/
 │   ├── init.ts           # Scaffold .buildpublic/ into project
-│   ├── auth.ts           # Interactive credential setup
+│   ├── auth.ts           # Social + AI credential flows
+│   ├── auth-ai.ts        # `bip auth ai` → .env upsert
 │   ├── draft.ts          # AI post generation + review loop
 │   ├── post.ts           # Publish drafts to platforms
 │   ├── evolve.ts         # Update BUILD_IN_PUBLIC.md
@@ -306,16 +328,19 @@ src/
 │   ├── reddit.ts         # API (snoowrap) + Playwright fallback
 │   └── hackernews.ts     # Playwright only (no official submit API)
 ├── ai/
-│   ├── drafter.ts        # Claude API call + prompt engineering
-│   ├── git.ts            # simple-git: read diff, log, changed files
-│   └── evolver.ts        # Soul / project doc evolution
+│   ├── drafter.ts        # Multi-provider HTTP drafting + prompts
+│   ├── providers.ts      # Provider detection, env keys, config
+│   ├── provider-choice.ts # Interactive provider when multiple keys
+│   ├── git.ts            # simple-git: diff, log, changed files
+│   └── evolver.ts        # Soul / BUILD_IN_PUBLIC evolution (HTTP)
 ├── capture/
 │   ├── screenshot.ts      # Playwright full-page screenshot
 │   └── recorder.ts        # Playwright video recording
 ├── config/
 │   ├── types.ts          # All shared interfaces
-│   ├── settings.ts        # Read/write .buildpublic/config.json
-│   └── credentials.ts    # Typed credential accessors
+│   ├── settings.ts       # Read/write .buildpublic/config.json
+│   ├── credentials.ts    # Typed credential accessors
+│   └── env-file.ts       # Upsert keys in project .env
 ├── memory/
 │   └── index.ts          # Posting history, preference tracking, prompt building
 └── skills/
@@ -325,14 +350,15 @@ src/
 ### Key Design Decisions
 
 - **ESM throughout**: `"type": "module"` required by ora, chalk, conf v12+
-- **Local-first**: All credentials/drafts live in `.buildpublic/` inside the developer's project (not in bip's install location)
-- **Posting strategy**: API primary (twitter-api-v2, LinkedIn REST, snoowrap), Playwright browser automation fallback for all platforms + HackerNews (no submit API)
-- **AI model**: `claude-sonnet-4-6`, `max_tokens: 4096`, returns JSON array of PlatformPost
-- **`process.cwd()`**: settings.ts always reads from the developer's project directory, not bip's own directory
+- **Local-first**: Social credentials and drafts live under `.buildpublic/` in the project; LLM keys are typically in `.env` (or the shell environment)
+- **Posting strategy**: API primary (twitter-api-v2, LinkedIn REST, snoowrap), Playwright fallback + HackerNews (no submit API)
+- **AI**: `drafter.ts` uses provider HTTP APIs (not only Anthropic SDK); default models per provider are in `providers.ts`; responses are parsed into a JSON `PlatformPost[]` array
+- **`.env`**: Loaded from `process.cwd()` at CLI startup (`dotenv`)
+- **`process.cwd()`**: Config and paths resolve from the developer's project directory, not bip's install location
 
 ## Contributing
 
-Contributions are welcome! Please see `CONTRIBUTING.md` for guidelines.
+Issues and pull requests are welcome.
 
 ### Development Workflow
 
@@ -392,6 +418,10 @@ Run `bip init` first to scaffold the `.buildpublic/` directory.
 
 Run `bip auth --list` to check which platforms have credentials configured. Re-run `bip auth <platform>` if needed.
 
+**LLM key not found / wrong provider**
+
+Run `bip auth ai --list`. Ensure you run `bip` from the project directory that contains your `.env`, or export the variable in your shell.
+
 **Tests failing with process.cwd() errors**
 
 The testing framework uses isolated test directories. Ensure test cleanup is working properly in `test/setup.ts`.
@@ -402,7 +432,7 @@ MIT
 
 ## Acknowledgments
 
-- [Claude API](https://docs.anthropic.com) for content generation
+- LLM providers (Anthropic, OpenAI, Zhipu, and others) for content generation
 - [Commander.js](https://github.com/tj/commander.js) for CLI parsing
 - [Playwright](https://playwright.dev) for browser automation
 - [Vitest](https://vitest.dev) for the testing framework

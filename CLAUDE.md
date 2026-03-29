@@ -1,80 +1,58 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance for AI tools working in this repository.
 
 ## Project Overview
 
-`bip` is a TypeScript CLI tool that automates "build in public" workflows. Developers add it to any project to share progress to X/Twitter, LinkedIn, Reddit, and HackerNews. It uses Claude API to generate platform-tailored posts from git activity.
+`bip` is a TypeScript CLI that automates “build in public” workflows: generate social posts from git activity and publish to X, LinkedIn, Reddit, and HackerNews. **Drafting** uses multiple LLM providers via HTTP (`src/ai/drafter.ts`, `src/ai/providers.ts`); **social credentials** live in `.buildpublic/config.json`.
 
-## Commands
+## Commands (maintainer)
 
 ```bash
-npm run build       # Compile TypeScript → dist/ (tsup, ESM)
-npm run dev         # Run CLI directly via tsx (no build step)
-npm run typecheck   # Type-check without emitting
+npm run build       # tsup → dist/
+npm run dev         # tsx src/index.ts
+npm run typecheck   # tsc --noEmit
+npm run test:run    # vitest run
 ```
 
-CLI (after build):
-```bash
-node dist/index.js --help
-node dist/index.js init
-node dist/index.js auth x
-node dist/index.js draft
-node dist/index.js post [platform]
-node dist/index.js capture screenshot <url>
-node dist/index.js capture record <url>
-```
+CLI (after build): `node dist/index.js --help`
 
-## Architecture
+## Architecture (high level)
 
 ```
 src/
-├── index.ts                  # CLI entry (Commander.js)
+├── index.ts              # Commander; loads dotenv from cwd .env first
 ├── commands/
-│   ├── init.ts               # Scaffold .buildpublic/ into project
-│   ├── auth.ts               # Interactive credential setup
-│   ├── draft.ts              # AI post generation + review loop
-│   ├── post.ts               # Publish drafts to platforms
-│   └── capture.ts            # Screenshot / video recording
-├── platforms/
-│   ├── base.ts               # IPlatform interface + helpers
-│   ├── twitter.ts            # API (twitter-api-v2) + Playwright fallback
-│   ├── linkedin.ts           # API (fetch REST) + Playwright fallback
-│   ├── reddit.ts             # API (snoowrap) + Playwright fallback
-│   └── hackernews.ts         # Playwright only (no official API)
+│   ├── auth.ts / auth-ai.ts   # Social creds + LLM keys → .env
+│   ├── draft.ts, post.ts, evolve.ts, soul.ts, …
 ├── ai/
-│   ├── drafter.ts            # Claude API call + prompt engineering
-│   └── git.ts                # simple-git: read diff, log, changed files
-├── capture/
-│   ├── screenshot.ts         # Playwright full-page screenshot
-│   └── recorder.ts           # Playwright video recording
-└── config/
-    ├── types.ts              # All shared interfaces
-    ├── settings.ts           # Read/write .buildpublic/config.json
-    └── credentials.ts        # Typed credential accessors
-templates/
-├── BUILD_IN_PUBLIC.md        # Scaffolded into developer's project by init
-└── config.template.json      # Default config template
+│   ├── drafter.ts        # Multi-provider HTTP completion + PlatformPost JSON
+│   ├── providers.ts      # PROVIDER_ENV_KEYS, detectProvider, getProviderConfigFor
+│   ├── provider-choice.ts
+│   ├── evolver.ts        # soul / BUILD_IN_PUBLIC evolution (HTTP)
+│   └── git.ts
+├── platforms/            # X, LinkedIn, Reddit, HN (+ Playwright fallbacks)
+├── config/
+│   ├── settings.ts, credentials.ts, types.ts, env-file.ts
+├── memory/, skills/, capture/
 ```
 
-## Key Design Decisions
+## Design notes
 
-- **ESM throughout**: `"type": "module"` required by ora, chalk, conf v12+
-- **Local-first**: all credentials/drafts live in `.buildpublic/` inside the developer's project (not in bip's install location)
-- **Posting strategy**: API primary (twitter-api-v2, LinkedIn REST, snoowrap), Playwright browser automation fallback for all platforms + HackerNews (no submit API)
-- **AI model**: `claude-sonnet-4-6`, `max_tokens: 2048`, returns JSON array of PlatformPost
-- **`process.cwd()`**: settings.ts always reads from the developer's project directory, not bip's own directory
+- **ESM** (`"type": "module"`).
+- **`process.cwd()`** — project-local paths, not bip’s install path.
+- **LLM keys**: env vars (e.g. `ANTHROPIC_API_KEY`, `GLM_API_KEY`); `bip auth ai` upserts project `.env`.
+- **Social posting**: APIs first; Playwright fallback; HN has no submit API.
 
-## Environment Variables
+## Environment
 
-- `ANTHROPIC_API_KEY` — required for `bip draft`
+- Provider keys: see `PROVIDER_ENV_KEYS` in `src/ai/providers.ts`.
+- Optional: `BIP_AI_PROVIDER` to force a provider when multiple keys exist.
 
-## Local Data Structure (per developer project)
+## Local project layout (typical)
 
 ```
 .buildpublic/
-├── config.json       # Credentials + platform config (gitignored)
-├── posts/            # Draft JSON files (YYYY-MM-DD-HHmmss.json)
-├── captures/         # Screenshots and videos (gitignored)
-└── hn-state.json     # Playwright HN session cookies (gitignored)
+├── config.json    # platforms + optional aiProvider (gitignored)
+├── posts/, memory/, captures/, …
 ```

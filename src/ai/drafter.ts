@@ -7,11 +7,13 @@
 import { existsSync, readFileSync } from 'fs';
 import { extname } from 'path';
 import type { GitContext, PlatformPost, Platform } from '../config/types.js';
-import { 
-  getProviderConfig, 
+import {
+  getProviderConfigFor,
   type AIProvider,
+  PROVIDER_ENV_KEYS,
   PROVIDER_NAMES,
   detectProvider,
+  listAvailableProviders,
 } from './providers.js';
 import { buildPublicMdPath, soulPath } from '../config/settings.js';
 import { loadSkillsForPlatforms } from '../skills/index.js';
@@ -112,7 +114,7 @@ function buildUserPrompt(
 /**
  * Simplified HTTP client that works with any provider
  */
-class SimpleAIClient {
+export class SimpleAIClient {
   private provider: AIProvider;
   private apiKey: string;
   private baseURL?: string;
@@ -199,7 +201,7 @@ class SimpleAIClient {
       throw new Error(`${PROVIDER_NAMES[this.provider]} API error: ${response.status} - ${errorText}`);
     }
 
-    return await response.json();
+    return (await response.json()) as { content: unknown };
   }
 
   private buildRequestBody(messages: any[]): any {
@@ -209,18 +211,20 @@ class SimpleAIClient {
         return {
           model: this.model || 'claude-sonnet-4-6',
           max_tokens: this.maxTokens || 4096,
-          system: messages[0]?.content || '',
-          messages: messages.slice(1).map(m => ({
-            role: m.role,
-            content: m.content,
-          })),
+          system: messages.find((m) => m.role === 'system')?.content || '',
+          messages: messages
+            .filter((m) => m.role !== 'system')
+            .map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
         };
 
       case 'openai':
         return {
           model: this.model || 'gpt-4o',
           max_tokens: this.maxTokens || 4096,
-          messages: messages.slice(1).map(m => ({
+          messages: messages.map((m) => ({
             role: m.role,
             content: m.content,
           })),
@@ -230,7 +234,7 @@ class SimpleAIClient {
         return {
           contents: [{
             parts: [{
-              text: messages.slice(1).map(m => m.content).join('\n'),
+              text: messages.map((m) => m.content).join('\n\n'),
             }],
           }],
         };
@@ -238,7 +242,7 @@ class SimpleAIClient {
       case 'cohere':
         return {
           model: this.model || 'command-r-plus-08-2024',
-          message: messages.slice(1).map(m => m.content).join('\n'),
+          message: messages.map((m) => m.content).join('\n\n'),
         };
 
       case 'deepseek':
@@ -246,7 +250,7 @@ class SimpleAIClient {
       case 'glm':
         return {
           model: this.model || (this.provider === 'glm' ? 'glm-4-plus' : 'deepseek-chat'),
-          messages: messages.slice(1).map(m => ({
+          messages: messages.map((m) => ({
             role: m.role,
             content: m.content,
           })),
@@ -258,12 +262,31 @@ class SimpleAIClient {
   }
 }
 
+export function createSimpleAIClient(provider: AIProvider): SimpleAIClient {
+  const cfg = getProviderConfigFor(provider);
+  if (!cfg) {
+    throw new Error(
+      `No API key for ${PROVIDER_NAMES[provider]}. Set ${PROVIDER_ENV_KEYS[provider]}.`
+    );
+  }
+  return new SimpleAIClient(provider, cfg.apiKey, {
+    model: cfg.model,
+    maxTokens: cfg.maxTokens,
+  });
+}
+
+export function extractTextFromAiResponse(response: unknown): string {
+  return extractResponseText(response);
+}
+
 export async function draft(
   context: GitContext,
-  platforms: Platform[]
+  platforms: Platform[],
+  options?: { provider?: AIProvider }
 ): Promise<PlatformPost[][]> {
-  const providerConfig = getProviderConfig();
-  if (!providerConfig) {
+  const provider = options?.provider ?? detectProvider();
+  const providerConfig = provider ? getProviderConfigFor(provider) : null;
+  if (!provider || !providerConfig) {
     throw new Error(
       'No AI provider configured. Set one of: ' +
       Object.values(PROVIDER_NAMES).join(', ') + '.\n\n' +
@@ -280,29 +303,26 @@ export async function draft(
     );
   }
 
-  const client = new SimpleAIClient(
-    providerConfig.apiKey,
-    providerConfig
-  );
+  const client = new SimpleAIClient(provider, providerConfig.apiKey, {
+    model: providerConfig.model,
+    maxTokens: providerConfig.maxTokens,
+  });
 
   const projectDoc = existsSync(buildPublicMdPath())
     ? readFileSync(buildPublicMdPath(), 'utf-8')
     : '(No BUILD_IN_PUBLIC.md found — using git context only)';
 
   const message = await client.generate([
-    {
-      role: 'user',
-      content: buildUserPrompt(projectDoc, context, platforms),
-    },
+    { role: 'system', content: buildSystemPrompt(platforms) },
+    { role: 'user', content: buildUserPrompt(projectDoc, context, platforms) },
   ]);
 
-  // Parse response based on provider
   let parsed: PlatformPost[];
   try {
-    parsed = this.parseResponse(message, providerConfig.model);
+    parsed = parseResponse(message, providerConfig.model);
   } catch (err) {
     throw new Error(
-      `${PROVIDER_NAMES[providerConfig.apiKey]} returned invalid response. Error: ${err}`
+      `${PROVIDER_NAMES[provider]} returned invalid response. Error: ${err}`
     );
   }
 
@@ -329,9 +349,24 @@ export async function draft(
   return result;
 }
 
+function extractResponseText(response: any): string {
+  const c = response?.content;
+  if (typeof c === 'string') {
+    return c;
+  }
+  if (Array.isArray(c)) {
+    return c.map((block: { text?: string }) => block?.text ?? '').join('');
+  }
+  const choice = response?.choices?.[0]?.message?.content;
+  if (typeof choice === 'string') {
+    return choice;
+  }
+  return '';
+}
+
 function parseResponse(response: any, model?: string): PlatformPost[] {
-  const content = response.content || response.choices?.[0]?.message?.content || '';
-  
+  const content = extractResponseText(response);
+
   // Extract JSON from different response formats
   let jsonString = content;
   
@@ -353,16 +388,5 @@ function parseResponse(response: any, model?: string): PlatformPost[] {
 }
 
 export function listProviders(): AIProvider[] {
-  const { listAvailableProviders } = require('./providers.js');
   return listAvailableProviders();
-}
-
-export function getActiveProvider(): AIProvider | null {
-  return detectProvider();
-}
-
-export function listAvailableProviderNames(): string[] {
-  const { listAvailableProviders } = require('./providers.js');
-  const providers = listAvailableProviders();
-  return providers.map(p => PROVIDER_NAMES[p]);
 }
