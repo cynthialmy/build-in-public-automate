@@ -11,6 +11,7 @@ import {
   getProviderConfigFor,
   type AIProvider,
   PROVIDER_ENV_KEYS,
+  PROVIDER_DEFAULT_MODELS,
   PROVIDER_NAMES,
   detectProvider,
   listAvailableProviders,
@@ -148,7 +149,7 @@ export class SimpleAIClient {
         },
       },
       google: {
-        url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent',
+        url: '', // set per-request — model id is in the path (see generate())
         headers: {
           'x-goog-api-key': this.apiKey,
           'Content-Type': 'application/json',
@@ -189,8 +190,15 @@ export class SimpleAIClient {
       throw new Error(`Provider ${this.provider} not yet implemented`);
     }
 
+    let url = endpoint.url;
+    if (this.provider === 'google') {
+      const modelId =
+        this.model || PROVIDER_DEFAULT_MODELS.google;
+      url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent`;
+    }
+
     const body = this.buildRequestBody(messages);
-    const response = await fetch(endpoint.url, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: endpoint.headers,
       body: JSON.stringify(body),
@@ -350,6 +358,14 @@ export async function draft(
 }
 
 function extractResponseText(response: any): string {
+  const geminiParts = response?.candidates?.[0]?.content?.parts;
+  if (Array.isArray(geminiParts)) {
+    const t = geminiParts
+      .map((p: { text?: string }) => p?.text ?? '')
+      .join('');
+    if (t) return t;
+  }
+
   const c = response?.content;
   if (typeof c === 'string') {
     return c;
