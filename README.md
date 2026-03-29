@@ -299,6 +299,37 @@ npm run build
 
 Compiles TypeScript to `dist/index.js` with ESM format, targeting Node 18.
 
+### Publishing to npm (maintainers)
+
+Package name: **`build-in-public`** (`package.json` → `files` ships `dist/`, `templates/`, `README.md`, `LICENSE`).
+
+1. **Pre-release checks**
+
+   ```bash
+   npm run typecheck
+   npm run build
+   npm run test:run    # optional but recommended
+   npm pack --dry-run  # inspect tarball contents
+   ```
+
+2. **Login** (once per machine): `npm login` — then `npm whoami` to confirm.
+
+3. **Bump version** (updates `package.json` and creates a git tag if the repo is clean):
+
+   ```bash
+   npm version patch   # or minor | major
+   ```
+
+4. **Publish**
+
+   ```bash
+   npm publish
+   ```
+
+   Use a scoped name (e.g. `@org/build-in-public`) only if you change `"name"` in `package.json`; scoped packages often need `npm publish --access public`.
+
+5. **Verify**: `npm view build-in-public version` or install with `npm install -g build-in-public` and run `bip --help`.
+
 ## Requirements
 
 - **Node.js**: 18+
