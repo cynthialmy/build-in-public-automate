@@ -60,25 +60,29 @@ export const PROVIDER_MAX_TOKENS: Record<AIProvider, number> = {
   glm: 4096,
 };
 
+/** Optional: force provider when multiple API keys exist (e.g. BIP_AI_PROVIDER=glm). */
 export function detectProvider(): AIProvider | null {
+  const forced = process.env.BIP_AI_PROVIDER?.toLowerCase() as AIProvider | undefined;
+  if (
+    forced &&
+    forced in PROVIDER_ENV_KEYS &&
+    process.env[PROVIDER_ENV_KEYS[forced as AIProvider]]
+  ) {
+    return forced as AIProvider;
+  }
+
   const keys = Object.entries(PROVIDER_ENV_KEYS);
   for (const [provider, envKey] of keys) {
     if (process.env[envKey]) {
-      return provider;
+      return provider as AIProvider;
     }
   }
   return null;
 }
 
-export function getProviderConfig(): AIProviderConfig | null {
-  const provider = detectProvider();
-  if (!provider) {
-    return null;
-  }
-
+export function getProviderConfigFor(provider: AIProvider): AIProviderConfig | null {
   const envKey = PROVIDER_ENV_KEYS[provider];
   const apiKey = process.env[envKey];
-  
   if (!apiKey) {
     return null;
   }
@@ -90,12 +94,28 @@ export function getProviderConfig(): AIProviderConfig | null {
   };
 }
 
+export function getProviderConfig(): AIProviderConfig | null {
+  const provider = detectProvider();
+  if (!provider) {
+    return null;
+  }
+  return getProviderConfigFor(provider);
+}
+
 export function listAvailableProviders(): AIProvider[] {
   const available: AIProvider[] = [];
   for (const [provider, envKey] of Object.entries(PROVIDER_ENV_KEYS)) {
     if (process.env[envKey]) {
-      available.push(provider);
+      available.push(provider as AIProvider);
     }
   }
   return available;
+}
+
+export function getActiveProvider(): AIProvider | null {
+  return detectProvider();
+}
+
+export function listAvailableProviderNames(): string[] {
+  return listAvailableProviders().map((p) => PROVIDER_NAMES[p]);
 }

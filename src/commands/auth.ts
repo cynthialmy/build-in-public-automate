@@ -3,6 +3,20 @@ import { setCredentials, hasCredentials } from '../config/credentials.js';
 import { isInitialized } from '../config/settings.js';
 import { colors } from '../core/branding.js';
 import type { Platform } from '../config/types.js';
+import { authAiCommand } from './auth-ai.js';
+
+type AuthTarget = Platform | 'ai';
+
+/** `bip auth ai glm` → `glm` */
+function getProviderAfterAuthAi(): string | undefined {
+  const argv = process.argv;
+  const authIdx = argv.indexOf('auth');
+  if (authIdx === -1) return undefined;
+  if (argv[authIdx + 1] !== 'ai') return undefined;
+  const next = argv[authIdx + 2];
+  if (!next || next.startsWith('-')) return undefined;
+  return next;
+}
 
 const PLATFORM_LABELS: Record<Platform, string> = {
   x: 'X (Twitter)',
@@ -153,28 +167,42 @@ function listCommand(): void {
 }
 
 export async function authCommand(platform?: string, options: { list?: boolean } = {}): Promise<void> {
+  if (platform === 'ai') {
+    await authAiCommand({
+      list: options.list,
+      provider: getProviderAfterAuthAi(),
+    });
+    return;
+  }
+
   if (options.list) {
     listCommand();
     return;
   }
 
-  if (!isInitialized()) {
-    console.error('bip is not initialized. Run `bip init` first.');
-    process.exit(1);
-  }
-
-  let target = platform as Platform | undefined;
+  let target = platform as AuthTarget | undefined;
 
   if (!target) {
-    target = await select<Platform>({
-      message: 'Which platform do you want to authenticate?',
+    target = await select<AuthTarget>({
+      message: 'What do you want to configure?',
       choices: [
+        { name: 'AI / LLM API keys (Claude, OpenAI, GLM, …)', value: 'ai' },
         { name: PLATFORM_LABELS.x, value: 'x' },
         { name: PLATFORM_LABELS.linkedin, value: 'linkedin' },
         { name: PLATFORM_LABELS.reddit, value: 'reddit' },
         { name: PLATFORM_LABELS.hackernews, value: 'hackernews' },
       ],
     });
+  }
+
+  if (target === 'ai') {
+    await authAiCommand({});
+    return;
+  }
+
+  if (!isInitialized()) {
+    console.error('bip is not initialized. Run `bip init` first.');
+    process.exit(1);
   }
 
   switch (target) {
@@ -191,7 +219,9 @@ export async function authCommand(platform?: string, options: { list?: boolean }
       await authHackerNews();
       break;
     default:
-      console.error(`Unknown platform: ${target}. Use: x, linkedin, reddit, hackernews`);
+      console.error(
+        `Unknown target: ${target}. Use: ai, x, linkedin, reddit, hackernews`
+      );
       process.exit(1);
   }
 }

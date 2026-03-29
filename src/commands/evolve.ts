@@ -1,30 +1,42 @@
 import { existsSync, readFileSync, writeFileSync, statSync } from 'fs';
 import { join } from 'path';
+import { simpleGit } from 'simple-git';
 import { select, editor } from '@inquirer/prompts';
 import chalk from 'chalk';
 import ora from 'ora';
 import { colors, divider } from '../core/branding.js';
 import { isInitialized, buildPublicMdPath } from '../config/settings.js';
 import { getPostingHistory } from '../memory/index.js';
-import { getActiveProvider, type AIProvider } from '../ai/providers.js';
-import { draft as draftPosts } from '../ai/drafter-new.js';
-import { checkStaleness } from './evolve.js';
+import {
+  PROVIDER_ENV_KEYS,
+  PROVIDER_NAMES,
+  listAvailableProviders,
+} from '../ai/providers.js';
+import { resolveAiProviderForSession } from '../ai/provider-choice.js';
+import { evolveProjectDoc } from '../ai/evolver.js';
 
-export async function evolveCommand(): Promise<void> {
+export async function evolveCommand(options: { provider?: string } = {}): Promise<void> {
   if (!isInitialized()) {
     console.error('bip is not initialized. Run `bip init` first.');
     process.exit(1);
   }
 
-  const provider = getActiveProvider();
-  if (!provider) {
-    console.error('No AI provider configured. Set one of:');
-    const { listAvailableProviderNames } = await import('../ai/providers.js');
-    console.log('  ' + listAvailableProviderNames().join('\n  '));
+  if (listAvailableProviders().length === 0) {
+    const keys = Object.values(PROVIDER_ENV_KEYS).join(', ');
+    console.error(`API key not set. Set one of: ${keys}`);
     process.exit(1);
   }
 
-  console.log(`Using AI provider: ${provider}`);
+  const aiProvider = await resolveAiProviderForSession({
+    cliProvider: options.provider,
+  });
+  if (!aiProvider) {
+    const keys = Object.values(PROVIDER_ENV_KEYS).join(', ');
+    console.error(`API key not set. Set one of: ${keys}`);
+    process.exit(1);
+  }
+
+  console.log(`Using AI provider: ${PROVIDER_NAMES[aiProvider]}`);
 
   const mdPath = buildPublicMdPath();
   if (!existsSync(mdPath)) {
@@ -49,10 +61,9 @@ export async function evolveCommand(): Promise<void> {
     }
   }
 
-  const git = await import('simple-git').then((m) => m.default);
   let gitLog: string;
   try {
-    const log = await git(process.cwd()).log({ maxCount: 50 });
+    const log = await simpleGit(process.cwd()).log({ maxCount: 50 });
     gitLog = log.all
       .map((c) => `${c.hash.slice(0, 7)} ${c.date.slice(0, 10)} ${c.message}`)
       .join('\n');
@@ -67,12 +78,17 @@ export async function evolveCommand(): Promise<void> {
 
   const history = getPostingHistory();
 
+  const currentDoc = readFileSync(mdPath, 'utf-8');
+
   const spinner = ora('Analyzing project evolution...').start();
   let proposed: string;
   try {
-    proposed = await draftPosts(
-      { branch: 'main', commits: ['abc123 2026-01-01 feat: test'], changedFiles: ['src/index.ts'], diff: '+ test', linesAdded: 10, linesRemoved: 5, commitsByType: { feat: ['feat: test'] } },
-      ['x', 'linkedin']
+    proposed = await evolveProjectDoc(
+      currentDoc,
+      gitLog,
+      packageJson,
+      history,
+      { provider: aiProvider }
     );
     spinner.succeed('Evolution suggestions ready!');
   } catch (err) {

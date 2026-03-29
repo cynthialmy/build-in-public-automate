@@ -5,6 +5,11 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { colors, divider } from '../core/branding.js';
 import { isInitialized, soulPath } from '../config/settings.js';
+import {
+  PROVIDER_ENV_KEYS,
+  listAvailableProviders,
+} from '../ai/providers.js';
+import { resolveAiProviderForSession } from '../ai/provider-choice.js';
 import { getEditDiffs, getPostingHistory } from '../memory/index.js';
 import { evolveSoul } from '../ai/evolver.js';
 
@@ -116,14 +121,26 @@ ${examplePost.trim() || '<!-- paste an example post here -->'}
   console.log(colors.dim('Edit anytime, or run `bip soul evolve` after a few drafts to refine.'));
 }
 
-export async function soulEvolveCommand(): Promise<void> {
+export async function soulEvolveCommand(options: {
+  provider?: string;
+} = {}): Promise<void> {
   if (!isInitialized()) {
     console.error('bip is not initialized. Run `bip init` first.');
     process.exit(1);
   }
 
-  if (!process.env.GLM_API_KEY && !process.env.ANTHROPIC_API_KEY) {
-    console.error('API key not set. Set either GLM_API_KEY or ANTHROPIC_API_KEY environment variable.');
+  if (listAvailableProviders().length === 0) {
+    const keys = Object.values(PROVIDER_ENV_KEYS).join(', ');
+    console.error(`API key not set. Set one of: ${keys}`);
+    process.exit(1);
+  }
+
+  const aiProvider = await resolveAiProviderForSession({
+    cliProvider: options.provider,
+  });
+  if (!aiProvider) {
+    const keys = Object.values(PROVIDER_ENV_KEYS).join(', ');
+    console.error(`API key not set. Set one of: ${keys}`);
     process.exit(1);
   }
 
@@ -147,7 +164,9 @@ export async function soulEvolveCommand(): Promise<void> {
   const spinner = ora('Analyzing your posting patterns...').start();
   let proposed: string;
   try {
-    proposed = await evolveSoul(currentSoul, editDiffs, history);
+    proposed = await evolveSoul(currentSoul, editDiffs, history, {
+      provider: aiProvider,
+    });
     spinner.succeed('Evolution suggestions ready!');
   } catch (err) {
     spinner.fail('Failed to generate suggestions');

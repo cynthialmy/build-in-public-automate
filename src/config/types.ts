@@ -1,3 +1,5 @@
+import type { AIProvider } from '../ai/providers.js';
+
 export type Platform = 'x' | 'linkedin' | 'reddit' | 'hackernews';
 
 export interface XCredentials {
@@ -43,6 +45,8 @@ export interface BipConfig {
   platforms: Partial<Record<Platform, PlatformConfig>>;
   postsDir: string;
   capturesDir: string;
+  /** Saved default when multiple AI API keys are present (see `bip draft` / provider prompt). */
+  aiProvider?: AIProvider;
 }
 
 export interface GitContext {
