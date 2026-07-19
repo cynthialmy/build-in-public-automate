@@ -1,4 +1,11 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  fchmodSync,
+  openSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -38,5 +45,11 @@ export function upsertEnvKey(cwd: string, key: string, value: string): void {
   }
 
   const body = out.join('\n');
-  writeFileSync(envPath, (body.endsWith('\n') ? body : `${body}\n`), 'utf-8');
+  const file = openSync(envPath, 'w', 0o600);
+  try {
+    fchmodSync(file, 0o600);
+    writeFileSync(file, body.endsWith('\n') ? body : `${body}\n`, 'utf-8');
+  } finally {
+    closeSync(file);
+  }
 }

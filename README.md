@@ -1,4 +1,4 @@
-# bip — build in public CLI
+# bip - build in public CLI
 
 [![npm](https://img.shields.io/npm/v/build-in-public)](https://www.npmjs.com/package/build-in-public)
 [![license](https://img.shields.io/npm/l/build-in-public)](LICENSE)
@@ -7,11 +7,11 @@
 
 Share your progress to X, LinkedIn, Reddit, and HackerNews from your terminal. `bip` reads your git activity, generates platform-tailored posts with your chosen **LLM provider** (Anthropic, OpenAI, GLM, and others), and publishes via official APIs or browser automation.
 
-Posts improve over time — bip remembers variant preferences, learns editing patterns, and adapts voice to match yours.
+Posts improve over time - bip remembers variant preferences, learns editing patterns, and adapts voice to match yours.
 
 ## Features
 
-- **Multi-provider AI**: Anthropic (Claude), Zhipu GLM, OpenAI, Google Gemini, Cohere, DeepSeek, Qwen — HTTP-based drafting with a unified prompt pipeline
+- **Multi-provider AI**: Anthropic (Claude), Zhipu GLM, OpenAI, Google Gemini, Cohere, DeepSeek, Qwen - HTTP-based drafting with a unified prompt pipeline
 - **CLI setup for API keys**: `bip auth ai` writes keys into the project `.env` (see [AI API keys](#ai-api-keys))
 - **Multi-Platform Posting**: X, LinkedIn, Reddit, HackerNews with per-platform strategies
 - **Smart Memory**: Tracks preferences, edit patterns, and avoids repetition
@@ -52,13 +52,13 @@ bip init
 
 This scaffolds into your project:
 
-- `BUILD_IN_PUBLIC.md` — your project's living story (committed to git)
-- `.buildpublic/config.json` — credentials and platform config (gitignored)
-- `.buildpublic/soul.md` — your posting voice and personality (committed)
-- `.buildpublic/skills/` — per-platform posting strategies (committed)
-- `.buildpublic/memory/` — posting history and preference tracking (gitignored)
-- `.buildpublic/posts/` — saved draft JSON files
-- `.buildpublic/captures/` — screenshots and videos (gitignored)
+- `BUILD_IN_PUBLIC.md` - your project's living story (committed to git)
+- `.buildpublic/config.json` - credentials and platform config (gitignored)
+- `.buildpublic/soul.md` - your posting voice and personality (committed)
+- `.buildpublic/skills/` - per-platform posting strategies (committed)
+- `.buildpublic/memory/` - posting history and preference tracking (gitignored)
+- `.buildpublic/posts/` - saved draft JSON files
+- `.buildpublic/captures/` - screenshots and videos (gitignored)
 
 ### 2. Define Your Voice
 
@@ -66,7 +66,7 @@ This scaffolds into your project:
 bip soul
 ```
 
-An interactive questionnaire that creates `soul.md` — your posting personality:
+An interactive questionnaire that creates `soul.md` - your posting personality:
 
 - **Tone**: Casual, technical, enthusiastic...
 - **Perspective**: I/me, we/us, third person...
@@ -93,7 +93,7 @@ Edit these files to change how bip writes for each platform. They're injected di
 
 `bip draft`, `bip evolve`, and `bip soul evolve` need **at least one** provider key in the environment.
 
-**Recommended — interactive setup** (writes or updates `./.env` in the project root):
+**Recommended - interactive setup** (writes or updates `./.env` in the project root):
 
 ```bash
 bip auth ai              # pick provider, paste key
@@ -132,10 +132,23 @@ The main `bip auth` menu also includes **AI / LLM API keys** alongside social pl
 |----------|---------------|----------------|
 | **X** | App Key, App Secret, Access Token, Access Token Secret | [developer.x.com](https://developer.x.com) |
 | **LinkedIn** | Access Token + Person URN | [linkedin.com/developers](https://www.linkedin.com/developers/) |
-| **Reddit** | Client ID + Secret | [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps) — create a "script" app |
+| **Reddit** | Client ID + Secret | [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps) - create a "script" app |
 | **HackerNews** | Username + password | Your regular HN login (browser automation only) |
 
 Credentials are stored in `.buildpublic/config.json` (automatically gitignored).
+
+### Optional: publish approved X drafts with Hermes Tweet
+
+If you already run Hermes Agent, you can keep `bip draft` for generating and reviewing posts, then publish an approved X draft through [Hermes Tweet](https://github.com/Xquik-dev/hermes-tweet#readme), a native Hermes Agent X/Twitter plugin. Install it on the Hermes runtime host:
+
+```bash
+hermes plugins install Xquik-dev/hermes-tweet --enable
+export HERMES_TWEET_ENABLE_ACTIONS="true"
+```
+
+Set `XQUIK_API_KEY` in the Hermes runtime environment. In Hermes, use `tweet_explore` to confirm the post endpoint, then call `tweet_action` only with the final user-approved X post from the latest `.buildpublic/posts/*.json` draft. Leave actions disabled for drafting-only sessions.
+
+Xquik is an independent third-party service. Not affiliated with X Corp. "Twitter" and "X" are trademarks of X Corp.
 
 ## Workflow
 
@@ -147,13 +160,13 @@ bip draft --provider glm   # non-interactive when multiple keys exist
 ```
 
 1. Reads your last 20 commits, changed files, and diff
-2. Shows a git summary — confirm before calling the API
+2. Shows a git summary - confirm before calling the API
 3. Sends everything to the configured LLM with:
    - `BUILD_IN_PUBLIC.md` context
    - `soul.md` voice
    - Platform `skills`
    - Posting `memory` (variant prefs, edit rate, common edits, recent topics, posts to avoid repeating)
-4. Returns **2 variants per platform** — pick one, edit inline, or skip
+4. Returns **2 variants per platform** - pick one, edit inline, or skip
 5. Saves draft to `.buildpublic/posts/YYYY-MM-DD-HHmmss.json`
 6. Records your variant choice and any edits to memory
 
@@ -190,7 +203,7 @@ You review, edit, or discard each change. Adds a `<!-- Last evolved: YYYY-MM-DD 
 bip soul evolve
 ```
 
-Analyzes your posting memory — which variants you pick, how you edit AI-generated text, what you add or remove — and proposes `soul.md` refinements. Examples:
+Analyzes your posting memory - which variants you pick, how you edit AI-generated text, what you add or remove - and proposes `soul.md` refinements. Examples:
 
 - "You consistently remove hashtags" → adds to your **Avoid** section
 - "You always shorten LinkedIn posts" → notes conciseness preference in **Tone**
@@ -312,7 +325,7 @@ Package name: **`build-in-public`** (`package.json` → `files` ships `dist/`, `
    npm pack --dry-run  # inspect tarball contents
    ```
 
-2. **Login** (once per machine): `npm login` — then `npm whoami` to confirm.
+2. **Login** (once per machine): `npm login` - then `npm whoami` to confirm.
 
 3. **Bump version** (updates `package.json` and creates a git tag if the repo is clean):
 
@@ -333,7 +346,7 @@ Package name: **`build-in-public`** (`package.json` → `files` ships `dist/`, `
 ## Requirements
 
 - **Node.js**: 18+
-- **At least one LLM API key** for draft/evolve flows — see [AI API keys](#4-ai-api-keys). Use `bip auth ai` or set the corresponding env vars manually.
+- **At least one LLM API key** for draft/evolve flows - see [AI API keys](#4-ai-api-keys). Use `bip auth ai` or set the corresponding env vars manually.
 
 ## Architecture
 
