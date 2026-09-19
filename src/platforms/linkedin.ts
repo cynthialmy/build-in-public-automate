@@ -1,8 +1,11 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import type { IPlatform, Attachments } from './base.js';
 import type { PlatformPost, PostResult, LinkedInCredentials } from '../config/types.js';
 import { getCredentials } from '../config/credentials.js';
 import { makeError } from './base.js';
+
+const STATE_PATH = join(process.cwd(), '.buildpublic', 'linkedin-state.json');
 
 /** Registers + uploads one image to LinkedIn, returning the resulting asset urn. */
 async function uploadImageAsset(
@@ -119,34 +122,44 @@ export class LinkedInPlatform implements IPlatform {
 
   async postViaBrowser(post: PlatformPost): Promise<PostResult> {
     const { chromium } = await import('playwright');
-    const creds = getCredentials('linkedin') as LinkedInCredentials & {
-      username?: string;
-      password?: string;
-    };
-    if (!creds?.username || !creds?.password) {
-      return {
-        platform: 'linkedin',
-        success: false,
-        error: 'Browser fallback requires username and password credentials',
-      };
-    }
 
     const browser = await chromium.launch({ headless: false });
-    const context = await browser.newContext();
+
+    // Restore a saved session if we have one — same pattern as X and
+    // HackerNews. LinkedIn is aggressive about detecting automated logins,
+    // so this never auto-fills a password from disk: the person logs in
+    // themselves in the opened window, and only the resulting session
+    // cookies are persisted (no LinkedIn password is ever stored).
+    const contextOptions: Parameters<typeof browser.newContext>[0] = {};
+    if (existsSync(STATE_PATH)) {
+      contextOptions.storageState = STATE_PATH;
+    }
+
+    const context = await browser.newContext(contextOptions);
     const page = await context.newPage();
 
     try {
-      await page.goto('https://www.linkedin.com/login');
-      await page.fill('#username', creds.username);
-      await page.fill('#password', creds.password);
-      await page.click('[type="submit"]');
-      await page.waitForURL('https://www.linkedin.com/feed/', { timeout: 15000 });
+      await page.goto('https://www.linkedin.com/feed/');
+      const loggedIn = await page.locator('.share-box-feed-entry__trigger').count() > 0;
+
+      if (!loggedIn) {
+        console.log('\n  Browser opened. Please log in to LinkedIn, then wait...');
+        await page.goto('https://www.linkedin.com/login');
+        await page.waitForURL('https://www.linkedin.com/feed/', { timeout: 120000 });
+
+        const state = await context.storageState();
+        writeFileSync(STATE_PATH, JSON.stringify(state), 'utf-8');
+        console.log("  Session saved — you won't need to log in again.\n");
+      }
 
       await page.click('.share-box-feed-entry__trigger');
       await page.waitForSelector('.ql-editor');
       await page.fill('.ql-editor', post.text);
       await page.click('[data-control-name="share.post"]');
       await page.waitForTimeout(3000);
+
+      const updatedState = await context.storageState();
+      writeFileSync(STATE_PATH, JSON.stringify(updatedState), 'utf-8');
 
       return { platform: 'linkedin', success: true };
     } catch (err) {
