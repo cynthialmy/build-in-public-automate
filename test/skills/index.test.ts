@@ -1,9 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Platform } from '../../src/config/types.js';
 
-import { loadSkillsForPlatforms, loadSkill } from '../../src/skills/index.js';
+vi.mock('fs', () => ({
+  existsSync: vi.fn(),
+  readFileSync: vi.fn(),
+}));
 
-const { existsSync, readFileSync } = vi.mocked(require('fs'));
+import { loadSkillsForPlatforms, loadSkill } from '../../src/skills/index.js';
+const { existsSync, readFileSync } = vi.mocked(await import('fs'));
 
 const TEST_DIR = process.cwd() + '/.buildpublic-test';
 

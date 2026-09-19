@@ -1,29 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { evolveSoul, evolveProjectDoc } from '../../src/ai/evolver.js';
-import Anthropic from '@anthropic-ai/sdk';
 import type { PostingRecord } from '../../src/config/types.js';
 
-vi.mock('@anthropic-ai/sdk', () => ({
-  default: class MockAnthropic {
-    constructor() {}
-    messages = {
-      create: async () => ({
-        content: [
-          {
-            type: 'text',
-            text: '# Updated content\n\nThis is the evolved version.',
-          },
-        ],
-      }),
-    },
-  },
-}));
-
-vi.mock('fs', () => ({
-  existsSync: vi.fn(),
-  readFileSync: vi.fn(),
-  writeFileSync: vi.fn(),
-}));
+function textResponse(text: string) {
+  return {
+    ok: true,
+    json: async () => ({ content: [{ type: 'text', text }] }),
+    text: async () => '',
+  };
+}
 
 describe('AI Evolver', () => {
   const mockPostingRecord: PostingRecord = {
@@ -44,137 +29,87 @@ describe('AI Evolver', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.ANTHROPIC_API_KEY = 'test-api-key';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(textResponse('# Updated content\n\nThis is the evolved version.'))
+    );
   });
 
   afterEach(() => {
     delete process.env.ANTHROPIC_API_KEY;
+    vi.unstubAllGlobals();
   });
 
   describe('evolveSoul', () => {
-    it('should evolve soul.md with AI based on posting history', async () => {
-      const { writeFileSync, existsSync } = require('fs');
-
-      // Mock file operations
-      existsSync.mockReturnValue(true);
-      writeFileSync.mockImplementation(() => {});
-
-      const result = await evolveSoul('test-project', [mockPostingRecord]);
+    it('returns the AI-evolved soul.md content', async () => {
+      const result = await evolveSoul('current soul content', [mockPostingRecord.editDiff!], [
+        mockPostingRecord,
+      ]);
 
       expect(result).toContain('Updated content');
-      expect(writeFileSync).toHaveBeenCalled();
     });
 
-    it('should include edit diff analysis in evolution', async () => {
-      const { writeFileSync, existsSync } = require('fs');
-
-      existsSync.mockReturnValue(true);
-      writeFileSync.mockImplementation(() => {});
-
-      const result = await evolveSoul('test-project', [mockPostingRecord]);
-
-      expect(writeFileSync).toHaveBeenCalled();
-    });
-
-    it('should handle empty posting history', async () => {
-      const { writeFileSync, existsSync } = require('fs');
-
-      existsSync.mockReturnValue(true);
-      writeFileSync.mockImplementation(() => {});
-
-      const result = await evolveSoul('test-project', []);
-
+    it('handles empty posting history and edit diffs', async () => {
+      const result = await evolveSoul('current soul content', [], []);
       expect(result).toBeDefined();
+      expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 
-    it('should create soul.md if it does not exist', async () => {
-      const { writeFileSync, existsSync, readFileSync } = require('fs');
+    it('includes edit diffs and stats in the prompt sent to the provider', async () => {
+      await evolveSoul('current soul content', [mockPostingRecord.editDiff!], [mockPostingRecord]);
 
-      existsSync.mockReturnValue(false);
-      readFileSync.mockReturnValue('');
-      writeFileSync.mockImplementation(() => {});
+      const [, requestInit] = (global.fetch as any).mock.calls[0];
+      const body = JSON.parse(requestInit.body);
+      const userMessage = body.messages.find((m: any) => m.role === 'user').content;
 
-      const result = await evolveSoul('test-project', []);
-
-      expect(writeFileSync).toHaveBeenCalled();
+      expect(userMessage).toContain('Just shipped a new feature! Check it out');
+      expect(userMessage).toContain('Total drafts: 1');
     });
 
-    it('should include posting statistics in prompt', async () => {
-      const { writeFileSync, existsSync } = require('fs');
-
-      existsSync.mockReturnValue(true);
-      writeFileSync.mockImplementation(() => {});
-
-      const records = Array.from({ length: 10 }, (_, i) => ({
-        ...mockPostingRecord,
-        draftId: `draft-${i}`,
-      }));
-
-      await evolveSoul('test-project', records);
-
-      expect(writeFileSync).toHaveBeenCalled();
+    it('throws when no AI provider is configured', async () => {
+      delete process.env.ANTHROPIC_API_KEY;
+      await expect(evolveSoul('soul', [], [])).rejects.toThrow('No AI provider configured');
     });
   });
 
   describe('evolveProjectDoc', () => {
-    it('should evolve BUILD_IN_PUBLIC.md with AI', async () => {
-      const { writeFileSync, existsSync } = require('fs');
-
-      existsSync.mockReturnValue(true);
-      writeFileSync.mockImplementation(() => {});
-
-      const result = await evolveProjectDoc('test-project', [mockPostingRecord]);
+    it('returns the AI-evolved BUILD_IN_PUBLIC.md content', async () => {
+      const result = await evolveProjectDoc(
+        '# Build In Public',
+        'abc1234 feat: add feature',
+        JSON.stringify({ dependencies: { express: '^4.0.0' } }),
+        [mockPostingRecord]
+      );
 
       expect(result).toContain('Updated content');
-      expect(writeFileSync).toHaveBeenCalled();
     });
 
-    it('should include package.json dependencies when available', async () => {
-      const { writeFileSync, existsSync, readFileSync } = require('fs');
-
-      existsSync.mockImplementation((path: string) => {
-        return path.includes('BUILD_IN_PUBLIC') || path.includes('package.json');
-      });
-
-      readFileSync.mockImplementation((path: string) => {
-        if (path.includes('package.json')) {
-          return JSON.stringify({ dependencies: { express: '^4.0.0', 'openai': '^1.0.0' } });
-        }
-        return '# Existing content';
-      });
-
-      writeFileSync.mockImplementation(() => {});
-
-      const result = await evolveProjectDoc('test-project', []);
-
-      expect(writeFileSync).toHaveBeenCalled();
-    });
-
-    it('should handle missing package.json gracefully', async () => {
-      const { writeFileSync, existsSync } = require('fs');
-
-      existsSync.mockReturnValue(false);
-      writeFileSync.mockImplementation(() => {});
-
-      const result = await evolveProjectDoc('test-project', []);
-
+    it('handles a missing package.json gracefully', async () => {
+      const result = await evolveProjectDoc('# Build In Public', 'abc1234 feat: x', null, []);
       expect(result).toBeDefined();
     });
 
-    it('should include posting history context', async () => {
-      const { writeFileSync, existsSync } = require('fs');
+    it('includes the git log and posting history in the prompt', async () => {
+      await evolveProjectDoc(
+        '# Build In Public',
+        'abc1234 feat: add feature',
+        null,
+        [mockPostingRecord]
+      );
 
-      existsSync.mockReturnValue(true);
-      writeFileSync.mockImplementation(() => {});
+      const [, requestInit] = (global.fetch as any).mock.calls[0];
+      const body = JSON.parse(requestInit.body);
+      const userMessage = body.messages.find((m: any) => m.role === 'user').content;
 
-      const records = Array.from({ length: 5 }, (_, i) => ({
-        ...mockPostingRecord,
-        draftId: `draft-${i}`,
-        commitSummary: `commit ${i}`,
-      }));
+      expect(userMessage).toContain('abc1234 feat: add feature');
+      expect(userMessage).toContain('feat: add new feature');
+    });
 
-      const result = await evolveProjectDoc('test-project', records);
-
-      expect(writeFileSync).toHaveBeenCalled();
+    it('throws when no AI provider is configured', async () => {
+      delete process.env.ANTHROPIC_API_KEY;
+      await expect(evolveProjectDoc('doc', 'log', null, [])).rejects.toThrow(
+        'No AI provider configured'
+      );
     });
   });
 });

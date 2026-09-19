@@ -11,7 +11,7 @@ import type {
   HackerNewsCredentials,
   Platform,
 } from '../../src/config/types.js';
-import { mkdirSync, rmdirSync, writeFileSync } from 'fs';
+import { mkdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 const TEST_DIR = join(process.cwd(), '.buildpublic-test');
@@ -46,7 +46,7 @@ describe('Credentials', () => {
   beforeEach(() => {
     // Clean up and create test directory
     if (require('fs').existsSync(TEST_DIR)) {
-      rmdirSync(TEST_DIR, { recursive: true, force: true });
+      rmSync(TEST_DIR, { recursive: true, force: true });
     }
     mkdirSync(TEST_DIR, { recursive: true });
 
@@ -63,7 +63,7 @@ describe('Credentials', () => {
   afterEach(() => {
     // Clean up after tests
     if (require('fs').existsSync(TEST_DIR)) {
-      rmdirSync(TEST_DIR, { recursive: true, force: true });
+      rmSync(TEST_DIR, { recursive: true, force: true });
     }
   });
 

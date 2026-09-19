@@ -12,7 +12,7 @@ import {
   soulPath,
   buildPublicMdPath,
 } from '../../src/config/settings.js';
-import { mkdirSync, rmdirSync, existsSync } from 'fs';
+import { mkdirSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
 
 const TEST_DIR = join(process.cwd(), '.buildpublic-test');
@@ -21,14 +21,14 @@ describe('Config Settings', () => {
   beforeEach(() => {
     // Clean up and create test directory
     if (existsSync(TEST_DIR)) {
-      rmdirSync(TEST_DIR, { recursive: true, force: true });
+      rmSync(TEST_DIR, { recursive: true, force: true });
     }
   });
 
   afterEach(() => {
     // Clean up after tests
     if (existsSync(TEST_DIR)) {
-      rmdirSync(TEST_DIR, { recursive: true, force: true });
+      rmSync(TEST_DIR, { recursive: true, force: true });
     }
   });
 
@@ -146,12 +146,13 @@ describe('Config Settings', () => {
   });
 
   describe('Path helper functions', () => {
+    // Uses BIP_TEST_DIR (see test/setup.ts), not the real `.buildpublic/`.
     it('should return correct paths', () => {
-      expect(postsDir()).toContain('.buildpublic/posts');
-      expect(capturesDir()).toContain('.buildpublic/captures');
-      expect(skillsDir()).toContain('.buildpublic/skills');
-      expect(memoryDir()).toContain('.buildpublic/memory');
-      expect(soulPath()).toContain('.buildpublic/soul.md');
+      expect(postsDir()).toBe(join(TEST_DIR, 'posts'));
+      expect(capturesDir()).toBe(join(TEST_DIR, 'captures'));
+      expect(skillsDir()).toBe(join(TEST_DIR, 'skills'));
+      expect(memoryDir()).toBe(join(TEST_DIR, 'memory'));
+      expect(soulPath()).toBe(join(TEST_DIR, 'soul.md'));
       expect(buildPublicMdPath()).toContain('BUILD_IN_PUBLIC.md');
     });
   });

@@ -1,11 +1,21 @@
 import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { skillPath } from '../config/settings.js';
 import type { Platform } from '../config/types.js';
 
-const TEMPLATE_SKILLS_DIR = new URL('../templates/skills/', import.meta.url).pathname;
+// Same depth ambiguity as commands/init.ts's TEMPLATE_DIR: bundled dist/index.js
+// vs. unbundled src/skills/index.ts under `tsx` sit at different depths from
+// the repo's templates/ dir, and `.pathname` also mishandles Windows/space paths.
+function resolveTemplateSkillsDir(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates = [join(here, '../templates/skills'), join(here, '../../templates/skills')];
+  return candidates.find((c) => existsSync(c)) ?? candidates[0]!;
+}
 
-function loadSkill(platform: Platform): string | null {
+const TEMPLATE_SKILLS_DIR = resolveTemplateSkillsDir();
+
+export function loadSkill(platform: Platform): string | null {
   // Try user's .buildpublic/skills/ first
   const userPath = skillPath(platform);
   if (existsSync(userPath)) {
