@@ -85,6 +85,8 @@ export interface DraftPost {
   attachments?: string[];
   /** Where each successful post landed — needed to look metrics up later. */
   postResults?: Partial<Record<Platform, { url: string; postedAt: string }>>;
+  /** Folder path per platform when saved for manual copy-paste instead of posted via bip. */
+  manualExports?: Partial<Record<Platform, string>>;
 }
 
 export interface PostResult {

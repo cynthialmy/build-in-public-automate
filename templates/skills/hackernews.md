@@ -24,6 +24,7 @@
 - Bad: "Check out what I built this weekend!"
 
 ## Avoid
+- Em dashes, and AI-sounding phrasing ("game-changer", "seamless", "unlock")
 - Hyperbole or marketing speak
 - Vague titles
 - Posts without substance (just a link)

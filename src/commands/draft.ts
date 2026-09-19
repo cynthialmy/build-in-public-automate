@@ -1,6 +1,6 @@
 import { writeFileSync } from 'fs';
 import { join } from 'path';
-import { select, confirm, editor } from '@inquirer/prompts';
+import { select, confirm, editor, input } from '@inquirer/prompts';
 import ora from 'ora';
 import chalk from 'chalk';
 import { colors, divider } from '../core/branding.js';
@@ -19,7 +19,7 @@ import {
 import { resolveAiProviderForSession } from '../ai/provider-choice.js';
 import { isGitRepo, getContext } from '../ai/git.js';
 import { draft as draftPosts } from '../ai/drafter.js';
-import { captureScreenshot } from '../capture/screenshot.js';
+import { captureScreenshot, describeScreenshotError } from '../capture/screenshot.js';
 import { recordVariantChoice, updatePreferences, getPostingHistory } from '../memory/index.js';
 import { checkStaleness } from './evolve.js';
 import { getCadenceNudge } from '../core/cadence.js';
@@ -276,6 +276,13 @@ export async function draftCommand(options: {
     return;
   }
 
+  // A quick back-and-forth so the draft isn't generic: what should this
+  // particular post actually emphasize? Skippable — most runs won't need it.
+  const focus = await input({
+    message: 'Anything specific this post should focus on? (optional, Enter to skip)',
+    default: '',
+  });
+
   const genSpinner = ora(
     `Generating posts (${PROVIDER_NAMES[aiProvider]})...`
   ).start();
@@ -283,6 +290,7 @@ export async function draftCommand(options: {
   try {
     variantGroups = await draftPosts(context, platforms, {
       provider: aiProvider,
+      focus: focus.trim() || undefined,
     });
     genSpinner.succeed('Posts generated!');
   } catch (err) {
@@ -344,7 +352,6 @@ export async function draftCommand(options: {
   });
 
   if (wantScreenshot) {
-    const { input } = await import('@inquirer/prompts');
     const url = await input({ message: 'URL to screenshot:' });
     const ssSpinner = ora('Capturing screenshot...').start();
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -354,8 +361,7 @@ export async function draftCommand(options: {
       ssSpinner.succeed(`Screenshot saved: ${saved}`);
       attachments.push(saved);
     } catch (err) {
-      ssSpinner.fail('Screenshot failed');
-      console.error(err);
+      ssSpinner.fail(`Screenshot failed: ${describeScreenshotError(err)}`);
     }
   }
 

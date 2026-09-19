@@ -23,6 +23,7 @@
 - Technical depth is OK — LinkedIn devs appreciate it
 
 ## Avoid
+- Em dashes, and AI-sounding phrasing ("game-changer", "seamless", "unlock")
 - "I'm thrilled to announce" or similar corporate openers
 - Excessive emoji
 - Hashtag spam at the bottom
