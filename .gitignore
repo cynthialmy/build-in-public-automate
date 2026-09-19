@@ -3,7 +3,13 @@ dist/
 *.js.map
 .env
 .env.local
+coverage/
 
-# bip local data (generated in developer projects)
-.buildpublic/config.json
-.buildpublic/captures/
+# bip's own dogfooded runtime state — never commit this tool's own
+# .buildpublic/ dir (this is what leaked session cookies previously).
+# Downstream *projects* using bip should also gitignore their own
+# .buildpublic/config.json, .buildpublic/captures/, etc. (see init.ts).
+.buildpublic/
+
+# stray dev script, not part of the test suite
+test_glm_key.js
