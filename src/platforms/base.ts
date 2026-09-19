@@ -1,11 +1,16 @@
 import type { PlatformPost, PostResult } from '../config/types.js';
 
+/** Local file paths (screenshots, recordings) to attach, if the platform supports it. */
+export type Attachments = string[];
+
 export interface IPlatform {
   readonly name: string;
+  /** Whether this platform's postViaApi/postViaBrowser can actually upload `attachments`. */
+  readonly supportsAttachments: boolean;
   hasApiCredentials(): boolean;
-  postViaApi(post: PlatformPost): Promise<PostResult>;
-  postViaBrowser(post: PlatformPost): Promise<PostResult>;
-  post(post: PlatformPost): Promise<PostResult>;
+  postViaApi(post: PlatformPost, attachments?: Attachments): Promise<PostResult>;
+  postViaBrowser(post: PlatformPost, attachments?: Attachments): Promise<PostResult>;
+  post(post: PlatformPost, attachments?: Attachments): Promise<PostResult>;
 }
 
 export function makeError(

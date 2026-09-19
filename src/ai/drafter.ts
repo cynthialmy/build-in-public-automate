@@ -4,8 +4,8 @@
  * Supports Anthropic, OpenAI, Google (Gemini), Cohere, DeepSeek, Qwen, GLM
  */
 
-import { existsSync, readFileSync } from 'fs';
-import { extname } from 'path';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { extname, join } from 'path';
 import type { GitContext, PlatformPost, Platform } from '../config/types.js';
 import {
   getProviderConfigFor,
@@ -16,7 +16,7 @@ import {
   detectProvider,
   listAvailableProviders,
 } from './providers.js';
-import { buildPublicMdPath, soulPath } from '../config/settings.js';
+import { buildPublicMdPath, soulPath, debugDir } from '../config/settings.js';
 import { loadSkillsForPlatforms } from '../skills/index.js';
 import { buildMemoryPromptSection } from '../memory/index.js';
 
@@ -380,27 +380,82 @@ function extractResponseText(response: any): string {
   return '';
 }
 
+/**
+ * Find the first top-level JSON array in `content` by scanning bracket
+ * depth (honoring string literals and escapes), rather than a regex.
+ *
+ * A naive `/\[[\s\S]*?\]/` non-greedy match stops at the *first* `]` it
+ * sees — which is the end of the first `threadParts`/nested array, not
+ * the end of the outer array. That silently truncated and failed to
+ * parse every response containing a nested array (i.e. every X thread).
+ */
+function extractJsonArray(content: string): string | null {
+  const start = content.indexOf('[');
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < content.length; i++) {
+    const ch = content[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+    } else if (ch === '[') {
+      depth++;
+    } else if (ch === ']') {
+      depth--;
+      if (depth === 0) {
+        return content.slice(start, i + 1);
+      }
+    }
+  }
+
+  return null; // unterminated — caller decides how to handle
+}
+
 function parseResponse(response: any, model?: string): PlatformPost[] {
   const content = extractResponseText(response);
-
-  // Extract JSON from different response formats
-  let jsonString = content;
-  
-  // Try to find JSON array in the content
-  const jsonMatch = content.match(/\[[\s\S]*?\]/);
-  if (jsonMatch) {
-    jsonString = jsonMatch[0];
-  }
+  const jsonString = extractJsonArray(content) ?? content;
 
   let parsed: PlatformPost[];
   try {
     parsed = JSON.parse(jsonString) as PlatformPost[];
-  } catch {
-    // If direct JSON parsing fails, try alternative formats
-    throw new Error(`Could not parse response as PlatformPost array`);
+  } catch (err) {
+    const cause = err instanceof Error ? err.message : String(err);
+    const debugPath = dumpRawResponse(content);
+    throw new Error(
+      `Could not parse response as PlatformPost array (${cause}).` +
+      (debugPath ? ` Raw response saved to ${debugPath}` : '')
+    );
   }
-  
+
   return parsed;
+}
+
+/** Save the raw, unparseable AI response so a failure is diagnosable, not just discarded. */
+function dumpRawResponse(content: string): string | null {
+  try {
+    const dir = debugDir();
+    mkdirSync(dir, { recursive: true });
+    const path = join(dir, `parse-failure-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`);
+    writeFileSync(path, content, 'utf-8');
+    return path;
+  } catch {
+    return null; // best-effort — never let debug logging mask the real error
+  }
 }
 
 export function listProviders(): AIProvider[] {

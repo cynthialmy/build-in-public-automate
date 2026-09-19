@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync } from 'fs';
 import { join } from 'path';
 import type { BipConfig } from './types.js';
 
@@ -37,6 +37,11 @@ export function memoryDir(): string {
   return join(bipDir(), 'memory');
 }
 
+/** Diagnostic dumps (e.g. unparseable AI responses) — gitignored, not user-facing config. */
+export function debugDir(): string {
+  return join(bipDir(), 'debug');
+}
+
 export function buildPublicMdPath(): string {
   return join(process.cwd(), 'BUILD_IN_PUBLIC.md');
 }
@@ -50,6 +55,7 @@ export function ensureDirectories(): void {
   mkdirSync(capturesDir(), { recursive: true });
   mkdirSync(skillsDir(), { recursive: true });
   mkdirSync(memoryDir(), { recursive: true });
+  mkdirSync(debugDir(), { recursive: true });
 }
 
 export function readConfig(): BipConfig {
@@ -64,7 +70,15 @@ export function readConfig(): BipConfig {
 
 export function writeConfig(config: BipConfig): void {
   mkdirSync(bipDir(), { recursive: true });
-  writeFileSync(configPath(), JSON.stringify(config, null, 2), 'utf-8');
+  const path = configPath();
+  writeFileSync(path, JSON.stringify(config, null, 2), 'utf-8');
+  // config.json holds plaintext social platform credentials (X app secret,
+  // Reddit password, LinkedIn token, HN password) — restrict to owner-only.
+  try {
+    chmodSync(path, 0o600);
+  } catch {
+    // best-effort — unsupported on some filesystems (e.g. Windows/FAT)
+  }
 }
 
 export function updateConfig(partial: Partial<BipConfig>): void {

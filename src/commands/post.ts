@@ -4,8 +4,9 @@ import { select, confirm } from '@inquirer/prompts';
 import chalk from 'chalk';
 import ora from 'ora';
 import { colors } from '../core/branding.js';
-import { isInitialized, postsDir } from '../config/settings.js';
+import { isInitialized, postsDir, updateConfig } from '../config/settings.js';
 import { recordPostResult } from '../memory/index.js';
+import { getHeadSha } from '../ai/git.js';
 import type { DraftPost, Platform, PlatformPost } from '../config/types.js';
 import { TwitterPlatform } from '../platforms/twitter.js';
 import { LinkedInPlatform } from '../platforms/linkedin.js';
@@ -139,16 +140,26 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
     }
 
     previewPost(post);
+
+    const platformImpl = PLATFORMS[post.platform];
+    const attachments = draft.attachments ?? [];
+    if (attachments.length > 0 && !platformImpl.supportsAttachments) {
+      console.log(
+        colors.warn(
+          `  ⚠ ${attachments.length} attachment(s) on this draft won't be uploaded — ${post.platform} posting doesn't support attachments yet.`
+        )
+      );
+    }
+
     const ok = await confirm({
       message: `Post to ${post.platform}?`,
       default: true,
     });
     if (!ok) continue;
 
-    const platformImpl = PLATFORMS[post.platform];
     const spinner = ora(`Posting to ${post.platform}...`).start();
 
-    let result = await platformImpl.post(post);
+    let result = await platformImpl.post(post, attachments);
 
     if (!result.success) {
       spinner.warn(`API posting failed: ${result.error}`);
@@ -158,7 +169,7 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
       });
       if (tryBrowser) {
         spinner.start('Opening browser...');
-        result = await platformImpl.postViaBrowser(post);
+        result = await platformImpl.postViaBrowser(post, attachments);
       }
     }
 
@@ -178,4 +189,13 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
   const allPosted = draft.posts.every((p) => draft.postedTo.includes(p.platform));
   draft.status = allPosted ? 'posted' : 'partial';
   saveDraft(draft);
+
+  // Record the diff baseline for the next `bip draft`, so future drafts
+  // describe work done since this post instead of an arbitrary commit window.
+  if (draft.postedTo.length > 0) {
+    const headSha = await getHeadSha();
+    if (headSha) {
+      updateConfig({ lastPostedSha: headSha });
+    }
+  }
 }
