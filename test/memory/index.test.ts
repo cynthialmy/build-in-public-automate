@@ -8,7 +8,7 @@ import {
   getPostingHistory,
 } from '../../src/memory/index.js';
 import type { Platform } from '../../src/config/types.js';
-import { mkdirSync, rmdirSync, writeFileSync, existsSync } from 'fs';
+import { mkdirSync, rmSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 const TEST_DIR = join(process.cwd(), '.buildpublic-test');
@@ -17,7 +17,7 @@ describe('Memory Module', () => {
   beforeEach(() => {
     // Clean up and create test directory
     if (existsSync(TEST_DIR)) {
-      rmdirSync(TEST_DIR, { recursive: true, force: true });
+      rmSync(TEST_DIR, { recursive: true, force: true });
     }
     mkdirSync(TEST_DIR, { recursive: true });
 
@@ -28,7 +28,7 @@ describe('Memory Module', () => {
   afterEach(() => {
     // Clean up after tests
     if (existsSync(TEST_DIR)) {
-      rmdirSync(TEST_DIR, { recursive: true, force: true });
+      rmSync(TEST_DIR, { recursive: true, force: true });
     }
   });
 

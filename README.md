@@ -356,7 +356,8 @@ src/
 │   ├── base.ts           # IPlatform interface + helpers
 │   ├── twitter.ts        # API (twitter-api-v2) + Playwright fallback
 │   ├── linkedin.ts       # API (fetch REST) + Playwright fallback
-│   ├── reddit.ts         # API (snoowrap) + Playwright fallback
+│   ├── reddit.ts         # API (fetch OAuth client) + Playwright fallback
+│   ├── reddit-client.ts  # Minimal Reddit OAuth2 script-app client
 │   └── hackernews.ts     # Playwright only (no official submit API)
 ├── ai/
 │   ├── drafter.ts        # Multi-provider HTTP drafting + prompts
@@ -382,7 +383,7 @@ src/
 
 - **ESM throughout**: `"type": "module"` required by ora, chalk, conf v12+
 - **Local-first**: Social credentials and drafts live under `.buildpublic/` in the project; LLM keys are typically in `.env` (or the shell environment)
-- **Posting strategy**: API primary (twitter-api-v2, LinkedIn REST, snoowrap), Playwright fallback + HackerNews (no submit API)
+- **Posting strategy**: API primary (twitter-api-v2, LinkedIn REST, fetch-based Reddit OAuth client), Playwright fallback + HackerNews (no submit API)
 - **AI**: `drafter.ts` uses provider HTTP APIs (not only Anthropic SDK); default models per provider are in `providers.ts`; responses are parsed into a JSON `PlatformPost[]` array
 - **`.env`**: Loaded from `process.cwd()` at CLI startup (`dotenv`)
 - **`process.cwd()`**: Config and paths resolve from the developer's project directory, not bip's install location

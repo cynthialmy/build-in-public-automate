@@ -1,7 +1,7 @@
 import { existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { TwitterApi } from 'twitter-api-v2';
-import type { IPlatform } from './base.js';
+import type { IPlatform, Attachments } from './base.js';
 import type { PlatformPost, PostResult, XCredentials } from '../config/types.js';
 import { getCredentials } from '../config/credentials.js';
 import { makeError } from './base.js';
@@ -10,6 +10,7 @@ const STATE_PATH = join(process.cwd(), '.buildpublic', 'x-state.json');
 
 export class TwitterPlatform implements IPlatform {
   readonly name = 'x';
+  readonly supportsAttachments = true;
 
   hasApiCredentials(): boolean {
     const creds = getCredentials('x');
@@ -23,7 +24,7 @@ export class TwitterPlatform implements IPlatform {
     );
   }
 
-  async postViaApi(post: PlatformPost): Promise<PostResult> {
+  async postViaApi(post: PlatformPost, attachments: Attachments = []): Promise<PostResult> {
     const creds = getCredentials('x') as XCredentials;
     const client = new TwitterApi({
       appKey: creds.appKey,
@@ -33,14 +34,28 @@ export class TwitterPlatform implements IPlatform {
     });
 
     try {
+      // X only accepts media on v1.1 upload; up to 4 images per tweet.
+      let mediaIds: string[] | undefined;
+      if (attachments.length > 0) {
+        mediaIds = await Promise.all(
+          attachments.slice(0, 4).map((path) => client.v1.uploadMedia(path))
+        );
+      }
+
       const parts = post.threadParts?.length ? post.threadParts : [post.text];
       let lastTweetId: string | undefined;
       let firstUrl: string | undefined;
 
-      for (const part of parts) {
+      for (const [i, part] of parts.entries()) {
         const payload: Parameters<typeof client.v2.tweet>[0] = { text: part };
         if (lastTweetId) {
           payload.reply = { in_reply_to_tweet_id: lastTweetId };
+        }
+        // Attach media to the first tweet in the thread only.
+        if (i === 0 && mediaIds?.length) {
+          // twitter-api-v2 types media_ids as a fixed-length tuple (1-4);
+          // we've already capped attachments to 4 above.
+          payload.media = { media_ids: mediaIds as [string, string, string, string] };
         }
         const result = await client.v2.tweet(payload);
         lastTweetId = result.data.id;
@@ -56,7 +71,7 @@ export class TwitterPlatform implements IPlatform {
     }
   }
 
-  async postViaBrowser(post: PlatformPost): Promise<PostResult> {
+  async postViaBrowser(post: PlatformPost, attachments: Attachments = []): Promise<PostResult> {
     const { chromium } = await import('playwright');
 
     // Use real Chrome with automation detection disabled so Google sign-in works
@@ -99,8 +114,29 @@ export class TwitterPlatform implements IPlatform {
       // Compose and post
       await page.click('[data-testid="SideNav_NewTweet_Button"]');
       await page.waitForSelector('[data-testid="tweetTextarea_0"]', { timeout: 5000 });
-      await page.fill('[data-testid="tweetTextarea_0"]', post.text);
-      await page.click('[data-testid="tweetButtonInline"]');
+
+      const parts = post.threadParts?.length ? post.threadParts : [post.text];
+      await page.fill('[data-testid="tweetTextarea_0"]', parts[0]!);
+
+      if (attachments.length > 0) {
+        const fileInput = page.locator('[data-testid="fileInput"]').first();
+        if ((await fileInput.count()) > 0) {
+          await fileInput.setInputFiles(attachments.slice(0, 4));
+          await page.waitForTimeout(1500); // let uploads finish rendering
+        }
+      }
+
+      // Build out the rest of the thread by clicking "Add" between tweets.
+      for (let i = 1; i < parts.length; i++) {
+        await page.click('[data-testid="addButton"]');
+        await page.waitForSelector(`[data-testid="tweetTextarea_${i}"]`, { timeout: 5000 });
+        await page.fill(`[data-testid="tweetTextarea_${i}"]`, parts[i]!);
+      }
+
+      const postButton = parts.length > 1
+        ? '[data-testid="tweetButton"]'
+        : '[data-testid="tweetButtonInline"]';
+      await page.click(postButton);
       await page.waitForTimeout(2000);
 
       // Save updated session state
@@ -115,10 +151,10 @@ export class TwitterPlatform implements IPlatform {
     }
   }
 
-  async post(post: PlatformPost): Promise<PostResult> {
+  async post(post: PlatformPost, attachments: Attachments = []): Promise<PostResult> {
     if (this.hasApiCredentials()) {
-      return this.postViaApi(post);
+      return this.postViaApi(post, attachments);
     }
-    return this.postViaBrowser(post);
+    return this.postViaBrowser(post, attachments);
   }
 }

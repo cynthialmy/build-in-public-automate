@@ -54,12 +54,10 @@
     "ora": "^8.0.0",
     "playwright": "^1.40.0",
     "simple-git": "^3.22.0",
-    "snoowrap": "^1.23.0",
     "twitter-api-v2": "^1.17.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.37",
-    "@types/snoowrap": "^1.14.0",
     "@vitest/coverage-v8": "^1.6.1",
     "tsup": "^8.0.0",
     "tsx": "^4.0.0",

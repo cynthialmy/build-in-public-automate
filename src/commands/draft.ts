@@ -204,7 +204,7 @@ export async function draftCommand(options: {
   const spinner = ora('Analyzing your changes...').start();
   let context: GitContext;
   try {
-    context = await getContext();
+    context = await getContext(20, { baseline: config.lastPostedSha });
     spinner.stop();
   } catch (err) {
     spinner.fail('Failed to read git context');

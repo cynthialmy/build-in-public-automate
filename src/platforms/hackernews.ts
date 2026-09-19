@@ -9,6 +9,7 @@ const STATE_PATH = join(process.cwd(), '.buildpublic', 'hn-state.json');
 
 export class HackerNewsPlatform implements IPlatform {
   readonly name = 'hackernews';
+  readonly supportsAttachments = false;
 
   hasApiCredentials(): boolean {
     // HN has no submit API — always use browser
