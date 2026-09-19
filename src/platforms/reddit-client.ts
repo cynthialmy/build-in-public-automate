@@ -101,3 +101,27 @@ export async function submitSelfPost(
   const permalink = url.startsWith('http') ? new URL(url).pathname : url;
   return { permalink };
 }
+
+/** GET /by_id/t3_<id36> — score + comment count for a previously submitted post. */
+export async function getPostMetrics(
+  creds: RedditCredentials,
+  postId36: string
+): Promise<{ score: number; numComments: number } | null> {
+  const token = await getAccessToken(creds);
+
+  const res = await fetch(`https://oauth.reddit.com/by_id/t3_${postId36}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'User-Agent': `${USER_AGENT_PREFIX} by ${creds.username}`,
+    },
+  });
+  if (!res.ok) return null;
+
+  const data = (await res.json()) as {
+    data?: { children?: { data?: { score?: number; num_comments?: number } }[] };
+  };
+  const post = data.data?.children?.[0]?.data;
+  if (!post || post.score === undefined) return null;
+
+  return { score: post.score, numComments: post.num_comments ?? 0 };
+}

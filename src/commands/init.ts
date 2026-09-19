@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, writeFileSync, appendFileSync, mkdirSync, copyFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { input, checkbox } from '@inquirer/prompts';
+import { input, checkbox, select } from '@inquirer/prompts';
 import { readConfig, writeConfig, ensureDirectories, isInitialized, skillsDir, soulPath } from '../config/settings.js';
+import { ARCHETYPES, findArchetype, renderSoulMd, applyArchetypeToBuildDoc } from '../core/archetypes.js';
 import type { BipConfig, Platform } from '../config/types.js';
 
 /**
@@ -69,6 +70,15 @@ export async function initCommand(options: { force?: boolean }): Promise<void> {
     ],
   });
 
+  const archetypeId = await select<string>({
+    message: 'Which sounds closest to what you\'re doing? (pre-fills soul.md and BUILD_IN_PUBLIC.md — you can edit or redo this anytime)',
+    choices: [
+      ...ARCHETYPES.map((a) => ({ name: `${a.label} — ${a.description}`, value: a.id })),
+      { name: 'Start blank (I\'ll fill it in myself)', value: 'blank' },
+    ],
+  });
+  const archetype = archetypeId === 'blank' ? undefined : findArchetype(archetypeId);
+
   // Create .buildpublic/ structure
   ensureDirectories();
 
@@ -95,20 +105,23 @@ export async function initCommand(options: { force?: boolean }): Promise<void> {
   const mdPath = join(cwd, 'BUILD_IN_PUBLIC.md');
   if (!existsSync(mdPath) || options.force) {
     const template = getTemplate('BUILD_IN_PUBLIC.md');
-    writeFileSync(
-      mdPath,
-      template.replace(/\{\{\s*project_name\s*\}\}/g, projectName),
-      'utf-8'
-    );
+    let doc = template.replace(/\{\{\s*project_name\s*\}\}/g, projectName);
+    if (archetype) {
+      doc = applyArchetypeToBuildDoc(doc, archetype);
+    }
+    writeFileSync(mdPath, doc, 'utf-8');
     console.log('  Created BUILD_IN_PUBLIC.md');
   }
 
-  // Scaffold soul.md
+  // Scaffold soul.md — pre-filled from the chosen archetype, or the blank
+  // template if the person opted to fill it in themselves.
   const soulDest = soulPath();
   if (!existsSync(soulDest) || options.force) {
-    const soulTemplate = getTemplate('soul.md');
-    writeFileSync(soulDest, soulTemplate, 'utf-8');
-    console.log('  Created soul.md');
+    const soulContent = archetype ? renderSoulMd(archetype) : getTemplate('soul.md');
+    writeFileSync(soulDest, soulContent, 'utf-8');
+    console.log(
+      archetype ? `  Created soul.md (${archetype.label} starting point)` : '  Created soul.md'
+    );
   }
 
   // Scaffold skills/*.md

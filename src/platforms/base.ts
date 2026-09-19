@@ -1,4 +1,4 @@
-import type { PlatformPost, PostResult } from '../config/types.js';
+import type { PlatformPost, PostResult, PostMetrics } from '../config/types.js';
 
 /** Local file paths (screenshots, recordings) to attach, if the platform supports it. */
 export type Attachments = string[];
@@ -11,6 +11,8 @@ export interface IPlatform {
   postViaApi(post: PlatformPost, attachments?: Attachments): Promise<PostResult>;
   postViaBrowser(post: PlatformPost, attachments?: Attachments): Promise<PostResult>;
   post(post: PlatformPost, attachments?: Attachments): Promise<PostResult>;
+  /** Fetch engagement numbers for a previously published post, if this platform supports it. */
+  getMetrics?(url: string): Promise<PostMetrics | null>;
 }
 
 export function makeError(

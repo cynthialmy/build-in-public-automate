@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { IPlatform } from './base.js';
-import type { PlatformPost, PostResult, HackerNewsCredentials } from '../config/types.js';
+import type { PlatformPost, PostResult, PostMetrics, HackerNewsCredentials } from '../config/types.js';
 import { getCredentials } from '../config/credentials.js';
 import { makeError } from './base.js';
 
@@ -91,5 +91,27 @@ export class HackerNewsPlatform implements IPlatform {
 
   async post(post: PlatformPost): Promise<PostResult> {
     return this.postViaBrowser(post);
+  }
+
+  async getMetrics(url: string): Promise<PostMetrics | null> {
+    const itemId = url.match(/item\?id=(\d+)/)?.[1];
+    if (!itemId) return null;
+
+    try {
+      // HN's Firebase-backed item API is public and needs no auth/credentials.
+      const res = await fetch(`https://hacker-news.firebaseio.com/v0/item/${itemId}.json`);
+      if (!res.ok) return null;
+
+      const item = (await res.json()) as { score?: number; descendants?: number } | null;
+      if (!item || item.score === undefined) return null;
+
+      return {
+        likes: item.score,
+        comments: item.descendants ?? 0,
+        fetchedAt: new Date().toISOString(),
+      };
+    } catch {
+      return null;
+    }
   }
 }

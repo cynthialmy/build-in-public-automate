@@ -179,6 +179,12 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
       );
       draft.postedTo.push(post.platform);
       recordPostResult(draft.id, post.platform, true);
+      if (result.url) {
+        draft.postResults = {
+          ...draft.postResults,
+          [post.platform]: { url: result.url, postedAt: new Date().toISOString() },
+        };
+      }
     } else {
       spinner.fail(`Failed to post to ${post.platform}: ${result.error}`);
       recordPostResult(draft.id, post.platform, false);
@@ -192,10 +198,12 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
 
   // Record the diff baseline for the next `bip draft`, so future drafts
   // describe work done since this post instead of an arbitrary commit window.
+  // Also timestamp it — this is what the cadence nudge (`bip status`) reads.
   if (draft.postedTo.length > 0) {
     const headSha = await getHeadSha();
-    if (headSha) {
-      updateConfig({ lastPostedSha: headSha });
-    }
+    updateConfig({
+      ...(headSha ? { lastPostedSha: headSha } : {}),
+      lastPostedAt: new Date().toISOString(),
+    });
   }
 }

@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'fs';
 import { colors, divider, platformBadge } from '../core/branding.js';
 import { isInitialized, readConfig, postsDir } from '../config/settings.js';
 import { hasCredentials } from '../config/credentials.js';
+import { getCadenceNudge } from '../core/cadence.js';
 import type { DraftPost, Platform } from '../config/types.js';
 
 const PLATFORMS: Platform[] = ['x', 'linkedin', 'reddit', 'hackernews'];
@@ -70,6 +71,12 @@ export async function statusCommand(): Promise<void> {
         `    ${colors.dim(draft.id)}  ${colors.dim(platforms)}  ${statusColor(draft.status)}  ${colors.dim(age)}`
       );
     }
+  }
+
+  const nudge = getCadenceNudge(config);
+  if (nudge) {
+    console.log();
+    console.log(colors.warn(`  ⚠ ${nudge}`));
   }
 
   console.log();

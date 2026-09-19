@@ -1,9 +1,9 @@
 import type { IPlatform } from './base.js';
-import type { PlatformPost, PostResult, RedditCredentials } from '../config/types.js';
+import type { PlatformPost, PostResult, PostMetrics, RedditCredentials } from '../config/types.js';
 import { getCredentials } from '../config/credentials.js';
 import { readConfig } from '../config/settings.js';
 import { makeError } from './base.js';
-import { submitSelfPost } from './reddit-client.js';
+import { submitSelfPost, getPostMetrics } from './reddit-client.js';
 
 export class RedditPlatform implements IPlatform {
   readonly name = 'reddit';
@@ -26,8 +26,14 @@ export class RedditPlatform implements IPlatform {
   async postViaApi(post: PlatformPost): Promise<PostResult> {
     const creds = getCredentials('reddit') as RedditCredentials;
     const config = readConfig();
-    const subreddit =
-      config.platforms.reddit?.defaultSubreddit ?? 'programming';
+    const subreddit = config.platforms.reddit?.defaultSubreddit;
+    if (!subreddit) {
+      return {
+        platform: 'reddit',
+        success: false,
+        error: 'No default subreddit configured. Run `bip auth reddit` to set one — bip will not guess a subreddit for you.',
+      };
+    }
 
     try {
       const submission = await submitSelfPost(creds, {
@@ -50,14 +56,20 @@ export class RedditPlatform implements IPlatform {
     const { chromium } = await import('playwright');
     const creds = getCredentials('reddit') as RedditCredentials;
     const config = readConfig();
-    const subreddit =
-      config.platforms.reddit?.defaultSubreddit ?? 'programming';
+    const subreddit = config.platforms.reddit?.defaultSubreddit;
 
     if (!creds?.username || !creds?.password) {
       return {
         platform: 'reddit',
         success: false,
         error: 'No credentials configured',
+      };
+    }
+    if (!subreddit) {
+      return {
+        platform: 'reddit',
+        success: false,
+        error: 'No default subreddit configured. Run `bip auth reddit` to set one — bip will not guess a subreddit for you.',
       };
     }
 
@@ -92,5 +104,21 @@ export class RedditPlatform implements IPlatform {
       return this.postViaApi(post);
     }
     return this.postViaBrowser(post);
+  }
+
+  async getMetrics(url: string): Promise<PostMetrics | null> {
+    // Reddit permalinks look like /r/<sub>/comments/<id36>/<slug>/
+    const postId36 = url.match(/\/comments\/([a-z0-9]+)\//)?.[1];
+    if (!postId36 || !this.hasApiCredentials()) return null;
+
+    const creds = getCredentials('reddit') as RedditCredentials;
+    const result = await getPostMetrics(creds, postId36).catch(() => null);
+    if (!result) return null;
+
+    return {
+      likes: result.score,
+      comments: result.numComments,
+      fetchedAt: new Date().toISOString(),
+    };
   }
 }

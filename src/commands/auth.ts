@@ -1,6 +1,6 @@
 import { input, password, select } from '@inquirer/prompts';
 import { setCredentials, hasCredentials } from '../config/credentials.js';
-import { isInitialized } from '../config/settings.js';
+import { isInitialized, readConfig, writeConfig } from '../config/settings.js';
 import { colors } from '../core/branding.js';
 import type { Platform, RedditCredentials } from '../config/types.js';
 import { authAiCommand } from './auth-ai.js';
@@ -129,6 +129,28 @@ async function authReddit(): Promise<void> {
   } else {
     console.log(colors.error('✗ Verification failed — credentials saved but could not connect'));
   }
+
+  // Require an explicit subreddit choice instead of silently defaulting to
+  // r/programming — posting AI-drafted self-promo there without knowing
+  // its self-promo rules is a fast way to get banned.
+  console.log(
+    colors.warn(
+      '\n  Heads up: most subreddits have strict self-promotion rules. Check the ' +
+      'subreddit\'s rules (and its 9:1 rule / flair requirements, if any) before posting.'
+    )
+  );
+  const subreddit = await input({
+    message: 'Which subreddit should bip post to by default? (no r/ prefix)',
+    validate: (v) => v.trim().length > 0 || 'A subreddit is required — bip will not guess one for you.',
+  });
+
+  const config = readConfig();
+  config.platforms.reddit = {
+    ...(config.platforms.reddit ?? { enabled: true }),
+    defaultSubreddit: subreddit.trim(),
+  };
+  writeConfig(config);
+  console.log(colors.dim(`  Default subreddit set to r/${subreddit.trim()}.`));
 }
 
 async function authHackerNews(): Promise<void> {

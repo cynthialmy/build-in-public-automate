@@ -60,6 +60,10 @@ This scaffolds into your project:
 - `.buildpublic/posts/` — saved draft JSON files
 - `.buildpublic/captures/` — screenshots and videos (gitignored)
 
+`bip init` also asks which of a few **archetypes** best matches what you're doing (solo dev / open source, indie SaaS founder, career-visibility engineer) and pre-fills `soul.md` and the Target Audience/Preferred Platforms/Post Style sections of `BUILD_IN_PUBLIC.md` with a real starting voice for it — or pick "Start blank" for the old empty-template behavior. Either way, everything is yours to edit afterward.
+
+Don't want to set any of this up yet? `bip draft --preview` generates one post straight from your git activity with just an LLM API key — no init, no social credentials, nothing saved.
+
 ### 2. Define Your Voice
 
 ```bash
@@ -229,14 +233,16 @@ Everything except base instructions is editable by you.
 | `bip auth --list` | Show credential status for all **social** platforms |
 | `bip draft` | Generate 2 post variants per platform from git activity |
 | `bip draft --provider <id>` | Force provider when multiple API keys exist |
+| `bip draft --preview` | See one generated post with only an LLM key — no `bip init` needed, nothing saved |
 | `bip post [platform]` | Publish latest draft (optionally to one platform) |
 | `bip post --dry-run` | Preview posts with character counts, no API calls |
 | `bip soul` | Interactive questionnaire to create or redo soul.md |
 | `bip soul evolve` | Propose soul.md refinements from posting patterns |
 | `bip evolve` | Update BUILD_IN_PUBLIC.md from recent project activity |
 | `bip doctor` | Check your setup for common issues |
-| `bip status` | See platforms, credentials, and recent drafts at a glance |
+| `bip status` | See platforms, credentials, recent drafts, and a posting-cadence nudge |
 | `bip history` | Browse past drafts with content previews |
+| `bip metrics` | Show engagement (likes/comments) for previously posted drafts — X, Reddit, HackerNews |
 | `bip capture screenshot <url>` | Save a full-page PNG |
 | `bip capture record <url>` | Record a browser session (press Enter to stop) |
 
