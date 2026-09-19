@@ -23,6 +23,7 @@
 - Last tweet: recap or CTA
 
 ## Avoid
-- Generic hashtags (#coding #developer) — use specific ones sparingly if at all
+- Em dashes, and AI-sounding phrasing ("game-changer", "seamless", "unlock")
+- Generic hashtags (#coding #developer), use specific ones sparingly if at all
 - "Excited to share" openers
 - Walls of text in a single tweet

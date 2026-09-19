@@ -23,7 +23,19 @@ import { buildMemoryPromptSection } from '../memory/index.js';
 const BASE_SYSTEM_PROMPT = `You are a "build in public" content strategist embedded in a developer's workflow.
 Transform raw git activity into authentic social media content developers actually want to read.
 Be specific (metrics, file names, actual problems solved). Show journey, not just results.
-Match each platform's culture precisely. Never write generic filler.`;
+Match each platform's culture precisely. Never write generic filler.
+
+Every post must:
+- Give enough project context that someone with no prior context understands what this is and why it matters, in one sentence.
+- Describe real progress: what changed, and what state it's in now (shipped, in progress, etc.) — not vague claims.
+- End with something that invites a reply: a specific question, an ask for feedback, or an invitation to try it.
+- Include a URL or mention a screenshot/attachment when one is available in the input — don't leave a post pointing nowhere if a link was provided.
+
+Writing rules, no exceptions:
+- Never use an em dash (—). Use a period, comma, or "and" instead.
+- No AI-slop phrasing: no "game-changer", "unlock", "seamless", "cutting-edge", "leverage", "delve into", "in today's fast-paced world", "excited to announce", "thrilled to share", or similar generic hype language.
+- No rhetorical-question openers ("Ever wonder...?", "What if I told you...?").
+- Write like a person describing their own work to a peer, in plain sentences.`;
 
 function buildSystemPrompt(platforms: Platform[]): string {
   let prompt = BASE_SYSTEM_PROMPT;
@@ -60,7 +72,8 @@ function getFileTypeBreakdown(changedFiles: string[]): string {
 function buildUserPrompt(
   projectDoc: string,
   context: GitContext,
-  platforms: Platform[]
+  platforms: Platform[],
+  focus?: string
 ): string {
   const lines: string[] = [
     'Generate social media posts for this git activity.',
@@ -70,6 +83,11 @@ function buildUserPrompt(
     lines.push('');
     lines.push('BUILD_IN_PUBLIC.md (project context):');
     lines.push(projectDoc);
+  }
+
+  if (focus) {
+    lines.push('');
+    lines.push(`The developer asked this post specifically focus on: ${focus}`);
   }
 
   lines.push('');
@@ -290,7 +308,7 @@ export function extractTextFromAiResponse(response: unknown): string {
 export async function draft(
   context: GitContext,
   platforms: Platform[],
-  options?: { provider?: AIProvider }
+  options?: { provider?: AIProvider; focus?: string }
 ): Promise<PlatformPost[][]> {
   const provider = options?.provider ?? detectProvider();
   const providerConfig = provider ? getProviderConfigFor(provider) : null;
@@ -322,7 +340,7 @@ export async function draft(
 
   const message = await client.generate([
     { role: 'system', content: buildSystemPrompt(platforms) },
-    { role: 'user', content: buildUserPrompt(projectDoc, context, platforms) },
+    { role: 'user', content: buildUserPrompt(projectDoc, context, platforms, options?.focus) },
   ]);
 
   let parsed: PlatformPost[];

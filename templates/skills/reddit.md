@@ -24,6 +24,7 @@
 - Respond to the community's likely questions preemptively
 
 ## Avoid
+- Em dashes, and AI-sounding phrasing ("game-changer", "seamless", "unlock")
 - Marketing language or calls to action
 - Linking to your product without substantial content
 - Clickbait titles

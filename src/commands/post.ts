@@ -1,12 +1,14 @@
 import { readdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { select, confirm } from '@inquirer/prompts';
+import { select, confirm, input } from '@inquirer/prompts';
 import chalk from 'chalk';
 import ora from 'ora';
 import { colors } from '../core/branding.js';
-import { isInitialized, postsDir, updateConfig } from '../config/settings.js';
+import { isInitialized, postsDir, capturesDir, updateConfig } from '../config/settings.js';
 import { recordPostResult } from '../memory/index.js';
 import { getHeadSha } from '../ai/git.js';
+import { captureScreenshot, describeScreenshotError } from '../capture/screenshot.js';
+import { saveManualExport } from './manual-export.js';
 import type { DraftPost, Platform, PlatformPost } from '../config/types.js';
 import { TwitterPlatform } from '../platforms/twitter.js';
 import { LinkedInPlatform } from '../platforms/linkedin.js';
@@ -62,6 +64,28 @@ function loadDrafts(): DraftPost[] {
 function saveDraft(draft: DraftPost): void {
   const path = join(postsDir(), `${draft.id}.json`);
   writeFileSync(path, JSON.stringify(draft, null, 2), 'utf-8');
+}
+
+/** Offers to capture a screenshot on the spot, for a manual export that has none yet. */
+async function maybeCaptureScreenshot(): Promise<string[]> {
+  const wantScreenshot = await confirm({
+    message: 'Grab a screenshot to include? (opens a URL and saves a PNG)',
+    default: false,
+  });
+  if (!wantScreenshot) return [];
+
+  const url = await input({ message: 'URL to screenshot:' });
+  const spinner = ora('Capturing screenshot...').start();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const outPath = join(capturesDir(), `screenshot-${timestamp}.png`);
+  try {
+    const saved = await captureScreenshot(url, outPath);
+    spinner.succeed(`Screenshot saved: ${saved}`);
+    return [saved];
+  } catch (err) {
+    spinner.fail(`Screenshot failed: ${describeScreenshotError(err)}`);
+    return [];
+  }
 }
 
 function previewPost(post: PlatformPost, isDryRun = false): void {
@@ -151,11 +175,30 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
       );
     }
 
-    const ok = await confirm({
-      message: `Post to ${post.platform}?`,
-      default: true,
+    const action = await select<'post' | 'manual' | 'skip'>({
+      message: `What do you want to do with the ${post.platform} post?`,
+      choices: [
+        { name: 'Post now', value: 'post' },
+        {
+          name: 'Save for manual copy-paste (no account/API access needed)',
+          value: 'manual',
+        },
+        { name: 'Skip', value: 'skip' },
+      ],
     });
-    if (!ok) continue;
+
+    if (action === 'skip') continue;
+
+    if (action === 'manual') {
+      const extra = await maybeCaptureScreenshot();
+      const dir = saveManualExport(draft.id, post, [...attachments, ...extra]);
+      draft.manualExports = { ...draft.manualExports, [post.platform]: dir };
+      console.log(
+        colors.success(`  ✓ Saved to ${dir}`) +
+        colors.dim(' — open post.txt, copy it in, and post it yourself.')
+      );
+      continue;
+    }
 
     const spinner = ora(`Posting to ${post.platform}...`).start();
 
@@ -188,6 +231,22 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
     } else {
       spinner.fail(`Failed to post to ${post.platform}: ${result.error}`);
       recordPostResult(draft.id, post.platform, false);
+
+      // Neither the API nor the browser worked — offer the manual path
+      // instead of just leaving the person with nothing to show for it.
+      const fallbackToManual = await confirm({
+        message: 'Save this post for manual copy-paste instead?',
+        default: true,
+      });
+      if (fallbackToManual) {
+        const extra = await maybeCaptureScreenshot();
+        const dir = saveManualExport(draft.id, post, [...attachments, ...extra]);
+        draft.manualExports = { ...draft.manualExports, [post.platform]: dir };
+        console.log(
+          colors.success(`  ✓ Saved to ${dir}`) +
+          colors.dim(' — open post.txt, copy it in, and post it yourself.')
+        );
+      }
     }
   }
 

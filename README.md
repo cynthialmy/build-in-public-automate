@@ -152,14 +152,18 @@ bip draft --provider glm   # non-interactive when multiple keys exist
 
 1. Reads your last 20 commits, changed files, and diff
 2. Shows a git summary — confirm before calling the API
-3. Sends everything to the configured LLM with:
+3. Asks if this post should focus on anything specific (optional — Enter to skip)
+4. Sends everything to the configured LLM with:
    - `BUILD_IN_PUBLIC.md` context
    - `soul.md` voice
    - Platform `skills`
    - Posting `memory` (variant prefs, edit rate, common edits, recent topics, posts to avoid repeating)
-4. Returns **2 variants per platform** — pick one, edit inline, or skip
-5. Saves draft to `.buildpublic/posts/YYYY-MM-DD-HHmmss.json`
-6. Records your variant choice and any edits to memory
+   - Your focus answer, if you gave one
+5. Returns **2 variants per platform** — pick one, edit inline, or skip
+6. Saves draft to `.buildpublic/posts/YYYY-MM-DD-HHmmss.json`
+7. Records your variant choice and any edits to memory
+
+Drafted text never uses em dashes and is instructed to avoid generic AI phrasing ("game-changer", "seamless", "unlock", etc.) — this is enforced in the system prompt, not just a style suggestion in the skill files.
 
 If `BUILD_IN_PUBLIC.md` hasn't been updated in 30+ days, bip will nudge you to run `bip evolve`.
 
@@ -171,7 +175,7 @@ bip post x            # publish to X only
 bip post --dry-run    # preview with character counts, no API calls
 ```
 
-Posts via official APIs first (X, LinkedIn, Reddit). Falls back to Playwright browser automation if API fails. HackerNews always uses Playwright (no official submit API).
+For each platform, `bip post` asks what to do: **post now** (official API first, falling back to Playwright browser automation), or **save for manual copy-paste** if you don't have API/developer access to a platform. Manual saves write `post.txt` (plus any screenshot) to `.buildpublic/posts/<draft-id>/<platform>/` so you can open the folder, copy the text, and paste it in yourself — no account setup required. If both the API and browser attempts fail, bip offers the manual save as a fallback instead of leaving you with nothing. HackerNews always uses Playwright (no official submit API).
 
 ### Evolve Your Project Doc
 

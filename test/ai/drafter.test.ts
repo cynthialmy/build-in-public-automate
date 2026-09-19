@@ -66,6 +66,33 @@ describe('AI Drafter', () => {
       expect(url).toBe('https://api.anthropic.com/v1/messages');
     });
 
+    it('instructs the model to never use em dashes or AI-slop phrasing', async () => {
+      await draft(mockGitContext, platforms);
+      const [, requestInit] = (global.fetch as any).mock.calls[0];
+      const body = JSON.parse(requestInit.body);
+
+      expect(body.system).toContain('Never use an em dash');
+      expect(body.system).toContain('AI-slop phrasing');
+    });
+
+    it('includes an explicit focus in the user prompt when provided', async () => {
+      await draft(mockGitContext, platforms, { focus: 'the new metrics command' });
+      const [, requestInit] = (global.fetch as any).mock.calls[0];
+      const body = JSON.parse(requestInit.body);
+      const userMessage = body.messages.find((m: any) => m.role === 'user').content;
+
+      expect(userMessage).toContain('the new metrics command');
+    });
+
+    it('omits focus guidance from the prompt when none is given', async () => {
+      await draft(mockGitContext, platforms);
+      const [, requestInit] = (global.fetch as any).mock.calls[0];
+      const body = JSON.parse(requestInit.body);
+      const userMessage = body.messages.find((m: any) => m.role === 'user').content;
+
+      expect(userMessage).not.toContain('specifically focus on');
+    });
+
     it('reads BUILD_IN_PUBLIC.md if it exists', async () => {
       existsSync.mockReturnValue(true);
       readFileSync.mockReturnValue('# Project\n\nDescription');
