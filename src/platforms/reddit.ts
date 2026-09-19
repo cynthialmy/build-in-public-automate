@@ -3,6 +3,7 @@ import type { PlatformPost, PostResult, RedditCredentials } from '../config/type
 import { getCredentials } from '../config/credentials.js';
 import { readConfig } from '../config/settings.js';
 import { makeError } from './base.js';
+import { submitSelfPost } from './reddit-client.js';
 
 export class RedditPlatform implements IPlatform {
   readonly name = 'reddit';
@@ -29,22 +30,11 @@ export class RedditPlatform implements IPlatform {
       config.platforms.reddit?.defaultSubreddit ?? 'programming';
 
     try {
-      const Snoowrap = (await import('snoowrap')).default;
-      const r = new Snoowrap({
-        userAgent: 'bip-cli/0.1.0 by ' + creds.username,
-        clientId: creds.clientId,
-        clientSecret: creds.clientSecret,
-        username: creds.username,
-        password: creds.password,
+      const submission = await submitSelfPost(creds, {
+        subreddit,
+        title: post.title ?? post.text.slice(0, 80),
+        text: post.text,
       });
-
-      const submission = await (
-        r.submitSelfpost({
-          subredditName: subreddit,
-          title: post.title ?? post.text.slice(0, 80),
-          text: post.text,
-        }) as unknown as Promise<{ permalink: string }>
-      );
 
       return {
         platform: 'reddit',
