@@ -179,6 +179,12 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
       );
       draft.postedTo.push(post.platform);
       recordPostResult(draft.id, post.platform, true);
+      if (result.url) {
+        draft.postResults = {
+          ...draft.postResults,
+          [post.platform]: { url: result.url, postedAt: new Date().toISOString() },
+        };
+      }
     } else {
       spinner.fail(`Failed to post to ${post.platform}: ${result.error}`);
       recordPostResult(draft.id, post.platform, false);

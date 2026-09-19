@@ -2,7 +2,7 @@ import { existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { TwitterApi } from 'twitter-api-v2';
 import type { IPlatform, Attachments } from './base.js';
-import type { PlatformPost, PostResult, XCredentials } from '../config/types.js';
+import type { PlatformPost, PostResult, PostMetrics, XCredentials } from '../config/types.js';
 import { getCredentials } from '../config/credentials.js';
 import { makeError } from './base.js';
 
@@ -156,5 +156,36 @@ export class TwitterPlatform implements IPlatform {
       return this.postViaApi(post, attachments);
     }
     return this.postViaBrowser(post, attachments);
+  }
+
+  async getMetrics(url: string): Promise<PostMetrics | null> {
+    const tweetId = url.match(/status\/(\d+)/)?.[1];
+    if (!tweetId || !this.hasApiCredentials()) return null;
+
+    const creds = getCredentials('x') as XCredentials;
+    const client = new TwitterApi({
+      appKey: creds.appKey,
+      appSecret: creds.appSecret,
+      accessToken: creds.accessToken,
+      accessSecret: creds.accessSecret,
+    });
+
+    try {
+      const tweet = await client.v2.singleTweet(tweetId, {
+        'tweet.fields': ['public_metrics'],
+      });
+      const metrics = tweet.data.public_metrics;
+      if (!metrics) return null;
+
+      return {
+        likes: metrics.like_count,
+        comments: metrics.reply_count,
+        shares: metrics.retweet_count + (metrics.quote_count ?? 0),
+        impressions: metrics.impression_count,
+        fetchedAt: new Date().toISOString(),
+      };
+    } catch {
+      return null;
+    }
   }
 }

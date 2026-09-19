@@ -11,6 +11,7 @@ import { postCommand } from './commands/post.js';
 import { doctorCommand } from './commands/doctor.js';
 import { statusCommand } from './commands/status.js';
 import { historyCommand } from './commands/history.js';
+import { metricsCommand } from './commands/metrics.js';
 import { soulCommand, soulEvolveCommand } from './commands/soul.js';
 import { evolveCommand } from './commands/evolve.js';
 import {
@@ -91,6 +92,13 @@ program
   .description('Show past drafts with content previews')
   .option('--limit <n>', 'Number of drafts to show', '10')
   .action((options: { limit?: string }) => historyCommand(options));
+
+// bip metrics
+program
+  .command('metrics')
+  .description('Show engagement (likes/comments) for previously posted drafts')
+  .option('--limit <n>', 'Number of posted drafts to check', '10')
+  .action((options: { limit?: string }) => metricsCommand(options));
 
 // bip soul
 const soul = program

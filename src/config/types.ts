@@ -83,6 +83,8 @@ export interface DraftPost {
   postedTo: Platform[];
   posts: PlatformPost[];
   attachments?: string[];
+  /** Where each successful post landed — needed to look metrics up later. */
+  postResults?: Partial<Record<Platform, { url: string; postedAt: string }>>;
 }
 
 export interface PostResult {
@@ -90,6 +92,15 @@ export interface PostResult {
   success: boolean;
   url?: string;
   error?: string;
+}
+
+/** Normalized engagement numbers — not every platform fills every field. */
+export interface PostMetrics {
+  likes?: number;
+  comments?: number;
+  shares?: number;
+  impressions?: number;
+  fetchedAt: string;
 }
 
 export interface PostPreferences {
