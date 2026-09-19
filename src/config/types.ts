@@ -53,6 +53,8 @@ export interface BipConfig {
    * work done *since you last posted*, not just the last N commits.
    */
   lastPostedSha?: string;
+  /** ISO timestamp of the last successful `bip post`. Drives the cadence nudge. */
+  lastPostedAt?: string;
 }
 
 export interface GitContext {

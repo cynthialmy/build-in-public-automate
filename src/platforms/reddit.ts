@@ -26,8 +26,14 @@ export class RedditPlatform implements IPlatform {
   async postViaApi(post: PlatformPost): Promise<PostResult> {
     const creds = getCredentials('reddit') as RedditCredentials;
     const config = readConfig();
-    const subreddit =
-      config.platforms.reddit?.defaultSubreddit ?? 'programming';
+    const subreddit = config.platforms.reddit?.defaultSubreddit;
+    if (!subreddit) {
+      return {
+        platform: 'reddit',
+        success: false,
+        error: 'No default subreddit configured. Run `bip auth reddit` to set one — bip will not guess a subreddit for you.',
+      };
+    }
 
     try {
       const submission = await submitSelfPost(creds, {
@@ -50,14 +56,20 @@ export class RedditPlatform implements IPlatform {
     const { chromium } = await import('playwright');
     const creds = getCredentials('reddit') as RedditCredentials;
     const config = readConfig();
-    const subreddit =
-      config.platforms.reddit?.defaultSubreddit ?? 'programming';
+    const subreddit = config.platforms.reddit?.defaultSubreddit;
 
     if (!creds?.username || !creds?.password) {
       return {
         platform: 'reddit',
         success: false,
         error: 'No credentials configured',
+      };
+    }
+    if (!subreddit) {
+      return {
+        platform: 'reddit',
+        success: false,
+        error: 'No default subreddit configured. Run `bip auth reddit` to set one — bip will not guess a subreddit for you.',
       };
     }
 

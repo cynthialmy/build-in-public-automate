@@ -56,7 +56,11 @@ program
     '--provider <id>',
     'AI provider when multiple API keys exist (e.g. glm, anthropic, openai)'
   )
-  .action((options: { platforms?: string; provider?: string }) =>
+  .option(
+    '--preview',
+    'Generate one post without running `bip init` first — needs only an LLM API key, saves nothing'
+  )
+  .action((options: { platforms?: string; provider?: string; preview?: boolean }) =>
     draftCommand(options)
   );
 

@@ -22,6 +22,7 @@ import { draft as draftPosts } from '../ai/drafter.js';
 import { captureScreenshot } from '../capture/screenshot.js';
 import { recordVariantChoice, updatePreferences, getPostingHistory } from '../memory/index.js';
 import { checkStaleness } from './evolve.js';
+import { getCadenceNudge } from '../core/cadence.js';
 import type { DraftPost, GitContext, Platform, PlatformPost } from '../config/types.js';
 
 const PLATFORM_LABELS: Record<Platform, string> = {
@@ -158,9 +159,14 @@ async function pickVariant(variants: PlatformPost[]): Promise<PickResult | null>
 export async function draftCommand(options: {
   platforms?: string;
   provider?: string;
+  preview?: boolean;
 }): Promise<void> {
-  if (!isInitialized()) {
-    console.error('bip is not initialized. Run `bip init` first.');
+  // --preview intentionally skips `bip init` entirely: it's the fastest way
+  // to see what bip would write, with only an LLM key, before setting up
+  // .buildpublic/, soul.md, or any social platform credentials.
+  const initialized = isInitialized();
+  if (!initialized && !options.preview) {
+    console.error('bip is not initialized. Run `bip init` first (or try `bip draft --preview`).');
     process.exit(1);
   }
 
@@ -184,14 +190,18 @@ export async function draftCommand(options: {
     process.exit(1);
   }
 
-  const config = readConfig();
+  const config = initialized ? readConfig() : undefined;
 
   // Determine which platforms to generate for
   let platforms: Platform[];
   if (options.platforms) {
     platforms = options.platforms.split(',').map((p) => p.trim()) as Platform[];
+  } else if (options.preview) {
+    // Keep the preview fast and focused — one platform's worth of taste,
+    // not the full 4-platform generation a real draft would do.
+    platforms = ['x'];
   } else {
-    const enabled = Object.entries(config.platforms)
+    const enabled = Object.entries(config!.platforms)
       .filter(([, v]) => v?.enabled)
       .map(([k]) => k as Platform);
 
@@ -204,17 +214,51 @@ export async function draftCommand(options: {
   const spinner = ora('Analyzing your changes...').start();
   let context: GitContext;
   try {
-    context = await getContext(20, { baseline: config.lastPostedSha });
+    context = await getContext(20, { baseline: config?.lastPostedSha });
     spinner.stop();
   } catch (err) {
     spinner.fail('Failed to read git context');
     throw err;
   }
 
+  if (options.preview) {
+    console.log(
+      colors.dim(`  AI provider: ${PROVIDER_NAMES[aiProvider]} (preview — nothing will be saved)`)
+    );
+    showGitSummary(context);
+
+    const genSpinner = ora(`Generating preview (${PROVIDER_NAMES[aiProvider]})...`).start();
+    let variantGroups: PlatformPost[][];
+    try {
+      variantGroups = await draftPosts(context, platforms, { provider: aiProvider });
+      genSpinner.succeed('Preview generated!');
+    } catch (err) {
+      genSpinner.fail('Failed to generate preview');
+      throw err;
+    }
+
+    for (const variants of variantGroups) {
+      for (const post of variants) {
+        console.log('\n' + formatPost(post));
+      }
+    }
+
+    console.log();
+    console.log(
+      colors.dim('  This was a preview — nothing was saved. Run `bip init` to set up your project and start saving/publishing drafts.')
+    );
+    return;
+  }
+
   // Check BUILD_IN_PUBLIC.md staleness
   const staleMessage = checkStaleness(buildPublicMdPath());
   if (staleMessage) {
     console.log(colors.warn(`  ${staleMessage}`));
+  }
+
+  const cadenceNudge = getCadenceNudge(config!); // preview (config-less) path already returned above
+  if (cadenceNudge) {
+    console.log(colors.warn(`  ⚠ ${cadenceNudge}`));
   }
 
   console.log(
