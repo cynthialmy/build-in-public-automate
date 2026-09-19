@@ -89,9 +89,24 @@ async function authX(): Promise<void> {
 
 async function authLinkedIn(): Promise<void> {
   console.log('\nLinkedIn credentials');
-  console.log('Get an access token via OAuth at: https://www.linkedin.com/developers/\n');
+  console.log(
+    'For automatic API posting, get an access token via OAuth at: https://www.linkedin.com/developers/\n' +
+    "Don't have one yet? Leave this blank — `bip post` will open a browser " +
+    'for you to log in manually instead (no password is ever stored).\n'
+  );
 
-  const accessToken = await input({ message: 'Access Token:' });
+  const accessToken = await input({ message: 'Access Token (optional — Enter to skip):', default: '' });
+
+  if (!accessToken.trim()) {
+    // Empty accessToken keeps hasApiCredentials() false (so post() falls
+    // back to the browser) while still marking the platform as configured
+    // for `bip doctor`/`bip status`, matching how HackerNews (no API at
+    // all) is treated.
+    setCredentials('linkedin', { accessToken: '', personUrn: '' });
+    console.log(colors.dim('\n  No API token set — bip post will use browser login for LinkedIn.'));
+    return;
+  }
+
   const personUrn = await input({
     message: 'Person URN (e.g. urn:li:person:XXXXXX):',
   });

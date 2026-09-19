@@ -149,6 +149,7 @@ export async function initCommand(options: { force?: boolean }): Promise<void> {
     '.buildpublic/captures/',
     '.buildpublic/hn-state.json',
     '.buildpublic/x-state.json',
+    '.buildpublic/linkedin-state.json',
     '.buildpublic/memory/',
     '.buildpublic/debug/',
   ].join('\n');
