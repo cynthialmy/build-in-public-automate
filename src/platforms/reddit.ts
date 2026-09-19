@@ -6,6 +6,9 @@ import { makeError } from './base.js';
 
 export class RedditPlatform implements IPlatform {
   readonly name = 'reddit';
+  // Self-text posts can't carry image attachments; a link/image post is a
+  // different submission type this command doesn't create.
+  readonly supportsAttachments = false;
 
   hasApiCredentials(): boolean {
     const creds = getCredentials('reddit');

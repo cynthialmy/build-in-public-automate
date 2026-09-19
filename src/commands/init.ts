@@ -1,10 +1,31 @@
 import { existsSync, readFileSync, writeFileSync, appendFileSync, mkdirSync, copyFileSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { input, checkbox } from '@inquirer/prompts';
 import { readConfig, writeConfig, ensureDirectories, isInitialized, skillsDir, soulPath } from '../config/settings.js';
 import type { BipConfig, Platform } from '../config/types.js';
 
-const TEMPLATE_DIR = new URL('../templates/', import.meta.url).pathname;
+/**
+ * Locate the bundled `templates/` directory. Its depth relative to this
+ * module differs between the built CLI and dev mode:
+ *  - `dist/index.js` is a single bundled file, so `import.meta.url` here
+ *    points at `dist/index.js` and `templates/` is one level up.
+ *  - Under `tsx src/index.ts` (unbundled), this code still runs from
+ *    `src/commands/init.ts`, so `templates/` is two levels up.
+ * `.pathname` on the URL was also wrong on Windows and any path
+ * containing a space — use `fileURLToPath` instead.
+ */
+function resolveTemplateDir(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates = [join(here, '../templates'), join(here, '../../templates')];
+  const found = candidates.find((c) => existsSync(c));
+  if (!found) {
+    throw new Error(`Could not locate templates directory (checked: ${candidates.join(', ')})`);
+  }
+  return found;
+}
+
+const TEMPLATE_DIR = resolveTemplateDir();
 
 function getTemplate(name: string): string {
   const path = join(TEMPLATE_DIR, name);
@@ -116,6 +137,7 @@ export async function initCommand(options: { force?: boolean }): Promise<void> {
     '.buildpublic/hn-state.json',
     '.buildpublic/x-state.json',
     '.buildpublic/memory/',
+    '.buildpublic/debug/',
   ].join('\n');
 
   if (existsSync(gitignorePath)) {

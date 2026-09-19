@@ -72,12 +72,12 @@ async function promptAiProviderChoice(
   console.log();
   const choice = await select<AIProvider>({
     message: saved
-      ? `当前项目默认使用「${PROVIDER_NAMES[saved]}」。请选择本次要使用的 AI 提供方：`
-      : '检测到多个 AI API key，请选择本次要使用的提供方：',
+      ? `This project's default provider is "${PROVIDER_NAMES[saved]}". Which provider should this run use?`
+      : 'Multiple AI API keys detected — which provider should this run use?',
     choices: available.map((p) => ({
       name:
         p === saved
-          ? `${PROVIDER_NAMES[p]}（当前默认）`
+          ? `${PROVIDER_NAMES[p]} (current default)`
           : PROVIDER_NAMES[p],
       value: p,
     })),
@@ -85,7 +85,7 @@ async function promptAiProviderChoice(
   });
 
   const shouldSave = await confirm({
-    message: '将本次选择保存为此项目的默认？',
+    message: 'Save this choice as the default for this project?',
     default: true,
   });
 

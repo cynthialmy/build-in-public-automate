@@ -47,6 +47,12 @@ export interface BipConfig {
   capturesDir: string;
   /** Saved default when multiple AI API keys are present (see `bip draft` / provider prompt). */
   aiProvider?: AIProvider;
+  /**
+   * SHA of HEAD the last time `bip post` successfully published something.
+   * Used as the diff baseline for the next `bip draft` so posts describe
+   * work done *since you last posted*, not just the last N commits.
+   */
+  lastPostedSha?: string;
 }
 
 export interface GitContext {
