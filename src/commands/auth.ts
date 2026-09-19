@@ -2,8 +2,9 @@ import { input, password, select } from '@inquirer/prompts';
 import { setCredentials, hasCredentials } from '../config/credentials.js';
 import { isInitialized } from '../config/settings.js';
 import { colors } from '../core/branding.js';
-import type { Platform } from '../config/types.js';
+import type { Platform, RedditCredentials } from '../config/types.js';
 import { authAiCommand } from './auth-ai.js';
+import { getMe as getRedditMe } from '../platforms/reddit-client.js';
 
 type AuthTarget = Platform | 'ai';
 
@@ -49,17 +50,9 @@ async function verifyLinkedIn(creds: { accessToken: string }): Promise<boolean> 
   }
 }
 
-async function verifyReddit(creds: { clientId: string; clientSecret: string; username: string; password: string }): Promise<boolean> {
+async function verifyReddit(creds: RedditCredentials): Promise<boolean> {
   try {
-    const Snoowrap = (await import('snoowrap')).default;
-    const r = new Snoowrap({
-      userAgent: 'bip-cli/1.0',
-      clientId: creds.clientId,
-      clientSecret: creds.clientSecret,
-      username: creds.username,
-      password: creds.password,
-    });
-    await (r.getMe() as unknown as Promise<void>);
+    await getRedditMe(creds);
     return true;
   } catch {
     return false;
