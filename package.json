@@ -47,13 +47,13 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "latest",
-    "@inquirer/prompts": "^5.0.0",
+    "@inquirer/prompts": "^8.7.2",
     "chalk": "^5.0.0",
     "commander": "^12.0.0",
     "dotenv": "^17.3.1",
     "ora": "^8.0.0",
     "playwright": "^1.40.0",
-    "simple-git": "^3.22.0",
+    "simple-git": "^3.36.0",
     "twitter-api-v2": "^1.17.0"
   },
   "devDependencies": {
