@@ -19,8 +19,10 @@ Posts improve over time — bip remembers variant preferences, learns editing pa
 - **Voice**: `bip soul` and `bip soul evolve` refine `soul.md` from your behavior
 - **Project Context**: `BUILD_IN_PUBLIC.md`, skills, and memory injected into prompts
 - **Draft Review**: Two variants per platform, pick/edit/skip, then save or post
-- **Capture**: Full-page screenshots and browser session recordings
+- **Capture**: Platform-sized screenshots (og/x/linkedin/reddit/hn presets, element targeting, retina scale) and browser session recordings
 - **Tests**: Vitest suite under `test/` (see [test/README.md](test/README.md))
+
+See [ROADMAP.md](ROADMAP.md) for what's next (smarter capture, MCP server, Claude Code skill).
 
 ## Install
 
@@ -247,7 +249,11 @@ Everything except base instructions is editable by you.
 | `bip status` | See platforms, credentials, recent drafts, and a posting-cadence nudge |
 | `bip history` | Browse past drafts with content previews |
 | `bip metrics` | Show engagement (likes/comments) for previously posted drafts — X, Reddit, HackerNews |
-| `bip capture screenshot <url>` | Save a full-page PNG |
+| `bip capture screenshot <url>` | Save a screenshot (full-page by default) |
+| `bip capture screenshot <url> --preset x` | Crop to a platform card size: `og`, `x`, `linkedin`, `reddit`, `hn`, `desktop`, `mobile` |
+| `bip capture screenshot <url> --selector <css>` | Capture just one element instead of the page |
+| `bip capture screenshot <url> --scale 2` | Retina-quality output |
+| `bip capture screenshot <url> --wait-for <css> --delay <ms>` | Wait for late-rendering content before capturing |
 | `bip capture record <url>` | Record a browser session (press Enter to stop) |
 
 ## Local Data Structure
