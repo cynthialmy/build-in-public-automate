@@ -100,9 +100,9 @@ Edit these files to change how bip writes for each platform. They're injected di
 
 ### 4. AI Drafting
 
-`bip draft` can write posts two ways: with a coding agent you already have running, or with its own LLM API key. Pick whichever fits.
+`bip draft`, `bip evolve`, and `bip soul evolve` can each write content two ways: with a coding agent you already have running, or with bip's own LLM API key. Pick whichever fits.
 
-**Recommended: draft with your coding agent, no API key needed.** If you're already running Claude Code, Cursor, Copilot, Codex, or similar, let it draft the post with the model you already have:
+**Recommended: use your coding agent, no API key needed.** If you're already running Claude Code, Cursor, Copilot, Codex, or similar, let it write the content with the model you already have:
 
 ```bash
 bip draft --context-only               # prints git activity + project context + voice as JSON, no LLM call
@@ -121,9 +121,19 @@ bip draft --apply variants.json        # saves what it wrote as a real draft, no
 }
 ```
 
-If the agent speaks MCP (see [MCP Server](#mcp-server)), it can call `bip_context` and `bip_save_draft` directly instead of shelling out. Either way, this saves a draft; `bip post` is still the step that reviews and publishes it.
+`bip evolve` and `bip soul evolve` work the same way, but `--apply <file>` takes a plain text file with the full updated document instead of JSON:
 
-**Alternative: bip drafts on its own**, if you don't have a coding agent running. This needs **at least one** provider key in the environment (also required for `bip evolve` and `bip soul evolve`).
+```bash
+bip evolve --context-only              # prints project doc + git log + posting history as JSON
+bip evolve --apply updated-doc.md      # saves the updated BUILD_IN_PUBLIC.md
+
+bip soul evolve --context-only         # prints current soul.md + edit history as JSON
+bip soul evolve --apply updated-soul.md
+```
+
+If the agent speaks MCP (see [MCP Server](#mcp-server)), it can call `bip_context`/`bip_save_draft`, `bip_evolve_context`/`bip_evolve_apply`, or `bip_soul_context`/`bip_soul_apply` directly instead of shelling out. Either way, this only saves content; `bip post` is still the step that reviews and publishes a draft.
+
+**Alternative: bip generates content on its own**, if you don't have a coding agent running. This needs **at least one** provider key in the environment.
 
 **Recommended: interactive setup** (writes or updates `./.env` in the project root):
 
@@ -271,8 +281,10 @@ Everything except base instructions is editable by you.
 | `bip post [platform]` | Publish latest draft (optionally to one platform) |
 | `bip post --dry-run` | Preview posts with character counts, no API calls |
 | `bip soul` | Interactive questionnaire to create or redo soul.md |
-| `bip soul evolve` | Propose soul.md refinements from posting patterns |
-| `bip evolve` | Update BUILD_IN_PUBLIC.md from recent project activity |
+| `bip soul evolve` | Propose soul.md refinements from posting patterns (needs an LLM key) |
+| `bip soul evolve --context-only` / `--apply <file>` | Same, but evolve with your own coding agent instead of an LLM key |
+| `bip evolve` | Update BUILD_IN_PUBLIC.md from recent project activity (needs an LLM key) |
+| `bip evolve --context-only` / `--apply <file>` | Same, but evolve with your own coding agent instead of an LLM key |
 | `bip doctor` | Check your setup for common issues |
 | `bip status` | See platforms, credentials, recent drafts, and a posting-cadence nudge |
 | `bip history` | Browse past drafts with content previews |
@@ -299,12 +311,17 @@ separate terminal. Tools exposed:
 | `bip_context` | Recommended way to draft. Returns the git activity, project context, voice, and platform strategy bip would send to an LLM, without calling one. Draft the post yourself, then save it with `bip_save_draft` |
 | `bip_save_draft` | Saves posts you drafted (`posts`, `attachments` optional) as a real draft. Does **not** publish |
 | `bip_draft_preview` | Fallback when no coding agent is available: generates post variants using bip's own configured LLM key (`platforms`, `provider`, `focus`). Does **not** save or publish |
+| `bip_evolve_context` | Recommended way to evolve BUILD_IN_PUBLIC.md. Returns the current doc, git log, package.json, and posting history bip would send to an LLM, without calling one |
+| `bip_evolve_apply` | Saves a BUILD_IN_PUBLIC.md you evolved (`content`), stamping today's date |
+| `bip_soul_context` | Recommended way to evolve soul.md. Returns the current soul.md, edit history, and posting stats bip would send to an LLM, without calling one |
+| `bip_soul_apply` | Saves a soul.md you evolved (`content`), stamping today's date |
 
-There is no `bip_post` tool, and none of these tools save a draft except
-`bip_save_draft`. The variant picking, editing, and platform-by-platform
-post/manual/skip choices in `bip post` are interactive by design, and publishing to
-a real social account isn't something an MCP tool call should be able to trigger
-silently. Use the CLI for the actual publish step.
+There is no `bip_post` tool. None of these tools publish anything: `bip_save_draft`,
+`bip_evolve_apply`, and `bip_soul_apply` only write local files. The variant picking,
+editing, and platform-by-platform post/manual/skip choices in `bip post` are
+interactive by design, and publishing to a real social account isn't something an
+MCP tool call should be able to trigger silently. Use the CLI for the actual publish
+step.
 
 Add it to Claude Desktop / Claude Code's MCP config:
 
@@ -420,7 +437,7 @@ Package name: **`build-in-public`** (`package.json` → `files` ships `dist/`, `
 ## Requirements
 
 - **Node.js**: 18+
-- **Either a coding agent** (Claude Code, Cursor, Copilot, Codex) **or at least one LLM API key** for drafting. `bip evolve`/`bip soul evolve` need an API key regardless. See [AI Drafting](#4-ai-drafting).
+- **Either a coding agent** (Claude Code, Cursor, Copilot, Codex) **or at least one LLM API key** for drafting, evolving BUILD_IN_PUBLIC.md, and evolving soul.md. See [AI Drafting](#4-ai-drafting).
 
 ## Architecture
 

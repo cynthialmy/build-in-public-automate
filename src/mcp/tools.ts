@@ -1,11 +1,27 @@
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { isInitialized, readConfig, capturesDir, postsDir, ensureDirectories } from '../config/settings.js';
+import { simpleGit } from 'simple-git';
+import {
+  isInitialized,
+  readConfig,
+  capturesDir,
+  postsDir,
+  buildPublicMdPath,
+  soulPath,
+  ensureDirectories,
+} from '../config/settings.js';
 import { hasCredentials } from '../config/credentials.js';
 import { getCadenceNudge } from '../core/cadence.js';
-import { loadAllDrafts } from '../core/drafts.js';
+import { loadAllDrafts, saveNewDraft } from '../core/drafts.js';
 import { isGitRepo, getContext } from '../ai/git.js';
 import { draft as draftPosts, buildDraftContext } from '../ai/drafter.js';
-import { saveNewDraft } from '../core/drafts.js';
+import {
+  buildEvolveDocContext,
+  buildEvolveSoulContext,
+  stampEvolvedDate,
+  type EvolveContext,
+} from '../ai/evolver.js';
+import { getEditDiffs, getPostingHistory } from '../memory/index.js';
 import {
   captureScreenshot,
   describeScreenshotError,
@@ -251,4 +267,75 @@ export function runSaveDraft(input: SaveDraftInput): SaveDraftResult {
   ensureDirectories();
   const savedDraft = saveNewDraft(input.posts, input.attachments ?? []);
   return { id: savedDraft.id, path: join(postsDir(), `${savedDraft.id}.json`) };
+}
+
+/**
+ * Assembles the same context `bip evolve` would send to an LLM provider,
+ * without calling one. Lets a coding agent evolve BUILD_IN_PUBLIC.md itself.
+ */
+export async function getEvolveDocContext(): Promise<EvolveContext> {
+  requireInitialized();
+  const mdPath = buildPublicMdPath();
+  if (!existsSync(mdPath)) {
+    throw new Error('No BUILD_IN_PUBLIC.md found. Run `bip init` to create one.');
+  }
+
+  let gitLog: string;
+  try {
+    const log = await simpleGit(process.cwd()).log({ maxCount: 50 });
+    gitLog = log.all.map((c) => `${c.hash.slice(0, 7)} ${c.date.slice(0, 10)} ${c.message}`).join('\n');
+  } catch {
+    gitLog = '(could not read git log)';
+  }
+
+  const pkgPath = join(process.cwd(), 'package.json');
+  const packageJson = existsSync(pkgPath) ? readFileSync(pkgPath, 'utf-8') : null;
+  const currentDoc = readFileSync(mdPath, 'utf-8');
+
+  return buildEvolveDocContext(currentDoc, gitLog, packageJson, getPostingHistory());
+}
+
+/** Saves an agent-evolved BUILD_IN_PUBLIC.md, stamping today's "Last evolved" date. */
+export function applyEvolvedDoc(content: string): { path: string } {
+  requireInitialized();
+  if (!content?.trim()) {
+    throw new Error('content must be a non-empty BUILD_IN_PUBLIC.md body.');
+  }
+  const mdPath = buildPublicMdPath();
+  writeFileSync(mdPath, stampEvolvedDate(content), 'utf-8');
+  return { path: mdPath };
+}
+
+/**
+ * Assembles the same context `bip soul evolve` would send to an LLM
+ * provider, without calling one. Lets a coding agent evolve soul.md itself.
+ */
+export function getSoulEvolveContext(): EvolveContext {
+  requireInitialized();
+  const path = soulPath();
+  if (!existsSync(path)) {
+    throw new Error('No soul.md found. Run `bip soul` first to create one.');
+  }
+
+  const editDiffs = getEditDiffs();
+  const history = getPostingHistory();
+  if (editDiffs.length === 0 && history.length < 3) {
+    throw new Error(
+      'Not enough posting history to suggest soul evolution. Generate a few more drafts with bip draft and edit some posts first.'
+    );
+  }
+
+  const currentSoul = readFileSync(path, 'utf-8');
+  return buildEvolveSoulContext(currentSoul, editDiffs, history);
+}
+
+/** Saves an agent-evolved soul.md, stamping today's "Last evolved" date. */
+export function applyEvolvedSoul(content: string): { path: string } {
+  requireInitialized();
+  if (!content?.trim()) {
+    throw new Error('content must be a non-empty soul.md body.');
+  }
+  const path = soulPath();
+  writeFileSync(path, stampEvolvedDate(content), 'utf-8');
+  return { path };
 }

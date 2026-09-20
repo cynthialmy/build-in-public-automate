@@ -65,25 +65,28 @@ A browser dashboard would add a context switch, which is the opposite of what th
 persona wants. If anything ships here, it's an inline review step before posting
 (e.g. `--dry-run`), not a new app to open. Revisit only if users ask for a UI.
 
-### Phase 5: Draft with your coding agent, not bip's own API key (shipped)
+### Phase 5: Use your coding agent, not bip's own API key (shipped)
 
 Most people running bip already have a coding agent open (Claude Code, Cursor,
 Copilot, Codex). Asking them to also configure a separate LLM API key for bip is an
 extra setup step and an extra cost that doesn't match how they actually work.
 
-Split what `bip draft` did into two steps, so the drafting step can be done by
-whatever agent is already running, using the model it already has:
+Split what `bip draft`, `bip evolve`, and `bip soul evolve` each did into two
+steps, so the text-generation step can be done by whatever agent is already
+running, using the model it already has:
 
 - `bip_context` / `bip draft --context-only`: returns the git activity, project
   context, voice, and platform strategy bip would otherwise send to an LLM
   provider. No LLM call, no API key needed.
 - `bip_save_draft` / `bip draft --apply <file>`: saves posts drafted elsewhere as
   a real draft, in the same shape the interactive flow produces. No LLM call.
+- `bip_evolve_context` / `bip evolve --context-only`, then `bip_evolve_apply` /
+  `bip evolve --apply <file>`: same split for BUILD_IN_PUBLIC.md.
+- `bip_soul_context` / `bip soul evolve --context-only`, then `bip_soul_apply` /
+  `bip soul evolve --apply <file>`: same split for soul.md.
 
-`bip draft`'s own key-based path (and `bip_draft_preview` over MCP) stays as the
-fallback for anyone without a coding agent running. `bip evolve` and
-`bip soul evolve` still need an API key either way; they are not part of this
-split.
+Each command's own key-based path (and `bip_draft_preview` over MCP) stays as the
+fallback for anyone without a coding agent running.
 
 ## Cross-cutting
 

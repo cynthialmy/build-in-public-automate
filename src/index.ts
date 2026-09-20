@@ -137,7 +137,18 @@ soul
     '--provider <id>',
     'AI provider when multiple API keys exist (e.g. glm, anthropic)'
   )
-  .action((options: { provider?: string }) => soulEvolveCommand(options));
+  .option(
+    '--context-only',
+    'Print the evolve context as JSON and exit. No LLM key needed: evolve with your own coding agent, then `bip soul evolve --apply <file>`'
+  )
+  .option(
+    '--apply <file>',
+    'Save a soul.md evolved elsewhere (a text file with the full content). No LLM key needed'
+  )
+  .action(
+    (options: { provider?: string; contextOnly?: boolean; apply?: string }) =>
+      soulEvolveCommand(options)
+  );
 
 // bip evolve
 program
@@ -147,7 +158,18 @@ program
     '--provider <id>',
     'AI provider when multiple API keys exist (e.g. glm, anthropic)'
   )
-  .action((options: { provider?: string }) => evolveCommand(options));
+  .option(
+    '--context-only',
+    'Print the evolve context as JSON and exit. No LLM key needed: evolve with your own coding agent, then `bip evolve --apply <file>`'
+  )
+  .option(
+    '--apply <file>',
+    'Save a BUILD_IN_PUBLIC.md evolved elsewhere (a text file with the full content). No LLM key needed'
+  )
+  .action(
+    (options: { provider?: string; contextOnly?: boolean; apply?: string }) =>
+      evolveCommand(options)
+  );
 
 // bip capture
 const capture = program

@@ -9,6 +9,10 @@ import {
   runDraftPreview,
   getDraftContext,
   runSaveDraft,
+  getEvolveDocContext,
+  applyEvolvedDoc,
+  getSoulEvolveContext,
+  applyEvolvedSoul,
 } from './tools.js';
 
 const PRESET_NAMES = Object.keys(VIEWPORT_PRESETS) as [string, ...string[]];
@@ -143,7 +147,7 @@ export function createServer(): McpServer {
         'Fallback for when no coding agent is available: generates post drafts from recent git activity using bip\'s own configured LLM key, without saving or publishing anything. Prefer bip_context + bip_save_draft when a coding agent is already running.',
       inputSchema: {
         platforms: z.array(z.enum(PLATFORM_NAMES)).optional().describe('Defaults to all platforms'),
-        provider: z.string().optional().describe('AI provider id, e.g. anthropic, glm — required if multiple API keys are set'),
+        provider: z.string().optional().describe('AI provider id, e.g. anthropic or glm. Required if multiple API keys are set'),
         focus: z.string().optional().describe('What this post should emphasize'),
       },
     },
@@ -151,6 +155,68 @@ export function createServer(): McpServer {
       try {
         const result = await runDraftPreview(input);
         return textResult(result);
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'bip_evolve_context',
+    {
+      description:
+        'Recommended way to evolve BUILD_IN_PUBLIC.md: assembles the current doc, recent git log, package.json, and posting history bip would send to an LLM, without calling one. Write the updated doc yourself, then save it with bip_evolve_apply.',
+      inputSchema: {},
+    },
+    async () => {
+      try {
+        return textResult(await getEvolveDocContext());
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'bip_evolve_apply',
+    {
+      description: 'Saves a BUILD_IN_PUBLIC.md you evolved (with bip_evolve_context) and stamps today\'s date.',
+      inputSchema: { content: z.string().min(1) },
+    },
+    async ({ content }) => {
+      try {
+        return textResult(applyEvolvedDoc(content));
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'bip_soul_context',
+    {
+      description:
+        'Recommended way to evolve soul.md: assembles the current soul.md, edit history, and posting stats bip would send to an LLM, without calling one. Write the updated soul.md yourself, then save it with bip_soul_apply.',
+      inputSchema: {},
+    },
+    async () => {
+      try {
+        return textResult(getSoulEvolveContext());
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'bip_soul_apply',
+    {
+      description: 'Saves a soul.md you evolved (with bip_soul_context) and stamps today\'s date.',
+      inputSchema: { content: z.string().min(1) },
+    },
+    async ({ content }) => {
+      try {
+        return textResult(applyEvolvedSoul(content));
       } catch (err) {
         return errorResult(err);
       }

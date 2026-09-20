@@ -11,22 +11,30 @@ import {
 } from './providers.js';
 import { createSimpleAIClient, extractTextFromAiResponse } from './drafter.js';
 
-export async function evolveSoul(
+export interface EvolveContext {
+  systemPrompt: string;
+  userPrompt: string;
+}
+
+const SOUL_SYSTEM_PROMPT =
+  'You are an editor helping refine a developer\'s soul.md (posting voice). Output only the full markdown file.';
+
+const DOC_SYSTEM_PROMPT =
+  'You are an editor helping refine a developer\'s BUILD_IN_PUBLIC.md. Output only the full markdown file.';
+
+/** Replaces the "Last evolved" comment with today's date, or leaves content unchanged if the comment isn't present. */
+export function stampEvolvedDate(content: string): string {
+  return content.replace(
+    /<!-- Last evolved: .* -->/,
+    `<!-- Last evolved: ${new Date().toISOString().slice(0, 10)} -->`
+  );
+}
+
+function buildSoulUserPrompt(
   currentSoul: string,
   editDiffs: PostingRecord['editDiff'][],
-  history: PostingRecord[],
-  options?: { provider?: AIProvider }
-): Promise<string> {
-  const provider = options?.provider ?? detectProvider();
-  if (!provider) {
-    throw new Error('No AI provider configured. Set one of: ' + Object.values(PROVIDER_NAMES).join(', '));
-  }
-  if (!getProviderConfigFor(provider)) {
-    throw new Error(`No API key for ${PROVIDER_NAMES[provider]}`);
-  }
-
-  const client = createSimpleAIClient(provider);
-
+  history: PostingRecord[]
+): string {
   const diffsSection =
     editDiffs.length > 0
       ? editDiffs
@@ -73,23 +81,27 @@ export async function evolveSoul(
     'Return the complete evolved file.',
   ].join('\n');
 
-  const messages = [
-    {
-      role: 'system',
-      content:
-        'You are an editor helping refine a developer\'s soul.md (posting voice). Output only the full markdown file.',
-    },
-    { role: 'user', content: userContent },
-  ];
-
-  const message = await client.generate(messages);
-  return extractTextFromAiResponse(message);
+  return userContent;
 }
 
-export async function evolveProjectDoc(
-  currentDoc: string,
-  gitLog: string,
-  packageJson: string | null,
+/**
+ * Assembles the same system/user prompt `evolveSoul()` sends to an LLM
+ * provider, without calling one. Lets a coding agent evolve soul.md itself.
+ */
+export function buildEvolveSoulContext(
+  currentSoul: string,
+  editDiffs: PostingRecord['editDiff'][],
+  history: PostingRecord[]
+): EvolveContext {
+  return {
+    systemPrompt: SOUL_SYSTEM_PROMPT,
+    userPrompt: buildSoulUserPrompt(currentSoul, editDiffs, history),
+  };
+}
+
+export async function evolveSoul(
+  currentSoul: string,
+  editDiffs: PostingRecord['editDiff'][],
   history: PostingRecord[],
   options?: { provider?: AIProvider }
 ): Promise<string> {
@@ -102,8 +114,22 @@ export async function evolveProjectDoc(
   }
 
   const client = createSimpleAIClient(provider);
+  const { systemPrompt, userPrompt } = buildEvolveSoulContext(currentSoul, editDiffs, history);
 
-  const userContent = [
+  const message = await client.generate([
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ]);
+  return extractTextFromAiResponse(message);
+}
+
+function buildDocUserPrompt(
+  currentDoc: string,
+  gitLog: string,
+  packageJson: string | null,
+  history: PostingRecord[]
+): string {
+  return [
     'Current BUILD_IN_PUBLIC.md:',
     currentDoc,
     '',
@@ -129,16 +155,45 @@ export async function evolveProjectDoc(
     'Preserve the overall structure. Add a "<!-- Last evolved: YYYY-MM-DD -->" comment at the top.',
     'Return the complete updated file.',
   ].join('\n');
+}
 
-  const messages = [
-    {
-      role: 'system',
-      content:
-        'You are an editor helping refine a developer\'s BUILD_IN_PUBLIC.md. Output only the full markdown file.',
-    },
-    { role: 'user', content: userContent },
-  ];
+/**
+ * Assembles the same system/user prompt `evolveProjectDoc()` sends to an LLM
+ * provider, without calling one. Lets a coding agent evolve BUILD_IN_PUBLIC.md itself.
+ */
+export function buildEvolveDocContext(
+  currentDoc: string,
+  gitLog: string,
+  packageJson: string | null,
+  history: PostingRecord[]
+): EvolveContext {
+  return {
+    systemPrompt: DOC_SYSTEM_PROMPT,
+    userPrompt: buildDocUserPrompt(currentDoc, gitLog, packageJson, history),
+  };
+}
 
-  const message = await client.generate(messages);
+export async function evolveProjectDoc(
+  currentDoc: string,
+  gitLog: string,
+  packageJson: string | null,
+  history: PostingRecord[],
+  options?: { provider?: AIProvider }
+): Promise<string> {
+  const provider = options?.provider ?? detectProvider();
+  if (!provider) {
+    throw new Error('No AI provider configured. Set one of: ' + Object.values(PROVIDER_NAMES).join(', '));
+  }
+  if (!getProviderConfigFor(provider)) {
+    throw new Error(`No API key for ${PROVIDER_NAMES[provider]}`);
+  }
+
+  const client = createSimpleAIClient(provider);
+  const { systemPrompt, userPrompt } = buildEvolveDocContext(currentDoc, gitLog, packageJson, history);
+
+  const message = await client.generate([
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ]);
   return extractTextFromAiResponse(message);
 }
