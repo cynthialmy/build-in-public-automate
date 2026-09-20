@@ -1,4 +1,4 @@
-# bip — build in public CLI
+# bip: build in public CLI
 
 [![npm](https://img.shields.io/npm/v/build-in-public)](https://www.npmjs.com/package/build-in-public)
 [![license](https://img.shields.io/npm/l/build-in-public)](LICENSE)
@@ -7,11 +7,11 @@
 
 Share your progress to X, LinkedIn, Reddit, and HackerNews from your terminal. `bip` reads your git activity, generates platform-tailored posts with your chosen **LLM provider** (Anthropic, OpenAI, GLM, and others), and publishes via official APIs or browser automation.
 
-Posts improve over time — bip remembers variant preferences, learns editing patterns, and adapts voice to match yours.
+Posts improve over time: bip remembers variant preferences, learns editing patterns, and adapts voice to match yours.
 
 ## Features
 
-- **Multi-provider AI**: Anthropic (Claude), Zhipu GLM, OpenAI, Google Gemini, Cohere, DeepSeek, Qwen — HTTP-based drafting with a unified prompt pipeline
+- **Multi-provider AI**: HTTP-based drafting with a unified prompt pipeline across Anthropic (Claude), Zhipu GLM, OpenAI, Google Gemini, Cohere, DeepSeek, and Qwen
 - **CLI setup for API keys**: `bip auth ai` writes keys into the project `.env` (see [AI API keys](#ai-api-keys))
 - **Multi-Platform Posting**: X, LinkedIn, Reddit, HackerNews with per-platform strategies
 - **Smart Memory**: Tracks preferences, edit patterns, and avoids repetition
@@ -19,8 +19,11 @@ Posts improve over time — bip remembers variant preferences, learns editing pa
 - **Voice**: `bip soul` and `bip soul evolve` refine `soul.md` from your behavior
 - **Project Context**: `BUILD_IN_PUBLIC.md`, skills, and memory injected into prompts
 - **Draft Review**: Two variants per platform, pick/edit/skip, then save or post
-- **Capture**: Full-page screenshots and browser session recordings
+- **Capture**: Platform-sized screenshots (og/x/linkedin/reddit/hn presets, element targeting, retina scale) and browser session recordings
+- **MCP server**: `bip mcp` exposes status/history/capture/draft-preview as MCP tools for Claude Code / Claude Desktop
 - **Tests**: Vitest suite under `test/` (see [test/README.md](test/README.md))
+
+See [ROADMAP.md](ROADMAP.md) for what's next (smarter capture, MCP server, Claude Code skill).
 
 ## Install
 
@@ -52,17 +55,18 @@ bip init
 
 This scaffolds into your project:
 
-- `BUILD_IN_PUBLIC.md` — your project's living story (committed to git)
-- `.buildpublic/config.json` — credentials and platform config (gitignored)
-- `.buildpublic/soul.md` — your posting voice and personality (committed)
-- `.buildpublic/skills/` — per-platform posting strategies (committed)
-- `.buildpublic/memory/` — posting history and preference tracking (gitignored)
-- `.buildpublic/posts/` — saved draft JSON files
-- `.buildpublic/captures/` — screenshots and videos (gitignored)
+- `BUILD_IN_PUBLIC.md`: your project's story, committed to git
+- `.buildpublic/config.json`: credentials and platform config (gitignored)
+- `.buildpublic/soul.md`: your posting voice and personality (committed)
+- `.buildpublic/skills/`: per-platform posting strategies (committed)
+- `.buildpublic/memory/`: posting history and preference tracking (gitignored)
+- `.buildpublic/posts/`: saved draft JSON files
+- `.buildpublic/captures/`: screenshots and videos (gitignored)
+- `.claude/skills/build-in-public/SKILL.md`: a Claude Code skill so bip works directly from Claude Code and Claude Desktop (see [MCP Server](#mcp-server))
 
-`bip init` also asks which of a few **archetypes** best matches what you're doing (solo dev / open source, indie SaaS founder, career-visibility engineer) and pre-fills `soul.md` and the Target Audience/Preferred Platforms/Post Style sections of `BUILD_IN_PUBLIC.md` with a real starting voice for it — or pick "Start blank" for the old empty-template behavior. Either way, everything is yours to edit afterward.
+`bip init` also asks which of a few **archetypes** best matches what you're doing (solo dev / open source, indie SaaS founder, career-visibility engineer) and pre-fills `soul.md` and the Target Audience/Preferred Platforms/Post Style sections of `BUILD_IN_PUBLIC.md` with a real starting voice for it, or you can pick "Start blank" for the old empty-template behavior. Either way, everything is yours to edit afterward.
 
-Don't want to set any of this up yet? `bip draft --preview` generates one post straight from your git activity with just an LLM API key — no init, no social credentials, nothing saved.
+Don't want to set any of this up yet? `bip draft --preview` generates one post straight from your git activity with just an LLM API key. No init, no social credentials, nothing saved.
 
 ### 2. Define Your Voice
 
@@ -70,7 +74,7 @@ Don't want to set any of this up yet? `bip draft --preview` generates one post s
 bip soul
 ```
 
-An interactive questionnaire that creates `soul.md` — your posting personality:
+An interactive questionnaire that creates `soul.md`, your posting personality:
 
 - **Tone**: Casual, technical, enthusiastic...
 - **Perspective**: I/me, we/us, third person...
@@ -97,7 +101,7 @@ Edit these files to change how bip writes for each platform. They're injected di
 
 `bip draft`, `bip evolve`, and `bip soul evolve` need **at least one** provider key in the environment.
 
-**Recommended — interactive setup** (writes or updates `./.env` in the project root):
+**Recommended: interactive setup** (writes or updates `./.env` in the project root):
 
 ```bash
 bip auth ai              # pick provider, paste key
@@ -136,7 +140,7 @@ The main `bip auth` menu also includes **AI / LLM API keys** alongside social pl
 |----------|---------------|----------------|
 | **X** | App Key, App Secret, Access Token, Access Token Secret | [developer.x.com](https://developer.x.com) |
 | **LinkedIn** | Access Token + Person URN | [linkedin.com/developers](https://www.linkedin.com/developers/) |
-| **Reddit** | Client ID + Secret | [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps) — create a "script" app |
+| **Reddit** | Client ID + Secret | [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps) (create a "script" app) |
 | **HackerNews** | Username + password | Your regular HN login (browser automation only) |
 
 Credentials are stored in `.buildpublic/config.json` (automatically gitignored).
@@ -151,19 +155,19 @@ bip draft --provider glm   # non-interactive when multiple keys exist
 ```
 
 1. Reads your last 20 commits, changed files, and diff
-2. Shows a git summary — confirm before calling the API
-3. Asks if this post should focus on anything specific (optional — Enter to skip)
+2. Shows a git summary, confirm before calling the API
+3. Asks if this post should focus on anything specific (optional, press Enter to skip)
 4. Sends everything to the configured LLM with:
    - `BUILD_IN_PUBLIC.md` context
    - `soul.md` voice
    - Platform `skills`
    - Posting `memory` (variant prefs, edit rate, common edits, recent topics, posts to avoid repeating)
    - Your focus answer, if you gave one
-5. Returns **2 variants per platform** — pick one, edit inline, or skip
+5. Returns **2 variants per platform**: pick one, edit inline, or skip
 6. Saves draft to `.buildpublic/posts/YYYY-MM-DD-HHmmss.json`
 7. Records your variant choice and any edits to memory
 
-Drafted text never uses em dashes and is instructed to avoid generic AI phrasing ("game-changer", "seamless", "unlock", etc.) — this is enforced in the system prompt, not just a style suggestion in the skill files.
+Drafted text never uses em dashes and avoids generic AI phrasing like "game-changer", "seamless", and "unlock". This is enforced in the system prompt, not just a suggestion in the skill files.
 
 If `BUILD_IN_PUBLIC.md` hasn't been updated in 30+ days, bip will nudge you to run `bip evolve`.
 
@@ -175,7 +179,7 @@ bip post x            # publish to X only
 bip post --dry-run    # preview with character counts, no API calls
 ```
 
-For each platform, `bip post` asks what to do: **post now** (official API first, falling back to Playwright browser automation), or **save for manual copy-paste** if you don't have API/developer access to a platform. Manual saves write `post.txt` (plus any screenshot) to `.buildpublic/posts/<draft-id>/<platform>/` so you can open the folder, copy the text, and paste it in yourself — no account setup required. If both the API and browser attempts fail, bip offers the manual save as a fallback instead of leaving you with nothing. HackerNews always uses Playwright (no official submit API).
+For each platform, `bip post` asks what to do: **post now** (official API first, falling back to Playwright browser automation), or **save for manual copy-paste** if you don't have API/developer access to a platform. Manual saves write `post.txt` (plus any screenshot) to `.buildpublic/posts/<draft-id>/<platform>/` so you can open the folder, copy the text, and paste it in yourself, no account setup required. If both the API and browser attempts fail, bip offers the manual save as a fallback instead of leaving you with nothing. HackerNews always uses Playwright (no official submit API).
 
 ### Evolve Your Project Doc
 
@@ -198,7 +202,7 @@ You review, edit, or discard each change. Adds a `<!-- Last evolved: YYYY-MM-DD 
 bip soul evolve
 ```
 
-Analyzes your posting memory — which variants you pick, how you edit AI-generated text, what you add or remove — and proposes `soul.md` refinements. Examples:
+Analyzes your posting memory (which variants you pick, how you edit AI-generated text, what you add or remove) and proposes `soul.md` refinements. Examples:
 
 - "You consistently remove hashtags" → adds to your **Avoid** section
 - "You always shorten LinkedIn posts" → notes conciseness preference in **Tone**
@@ -237,7 +241,7 @@ Everything except base instructions is editable by you.
 | `bip auth --list` | Show credential status for all **social** platforms |
 | `bip draft` | Generate 2 post variants per platform from git activity |
 | `bip draft --provider <id>` | Force provider when multiple API keys exist |
-| `bip draft --preview` | See one generated post with only an LLM key — no `bip init` needed, nothing saved |
+| `bip draft --preview` | See one generated post with only an LLM key, no `bip init` needed, nothing saved |
 | `bip post [platform]` | Publish latest draft (optionally to one platform) |
 | `bip post --dry-run` | Preview posts with character counts, no API calls |
 | `bip soul` | Interactive questionnaire to create or redo soul.md |
@@ -246,9 +250,54 @@ Everything except base instructions is editable by you.
 | `bip doctor` | Check your setup for common issues |
 | `bip status` | See platforms, credentials, recent drafts, and a posting-cadence nudge |
 | `bip history` | Browse past drafts with content previews |
-| `bip metrics` | Show engagement (likes/comments) for previously posted drafts — X, Reddit, HackerNews |
-| `bip capture screenshot <url>` | Save a full-page PNG |
+| `bip metrics` | Show engagement (likes/comments) for previously posted drafts on X, Reddit, and HackerNews |
+| `bip capture screenshot <url>` | Save a screenshot (full-page by default) |
+| `bip capture screenshot <url> --preset x` | Crop to a platform card size: `og`, `x`, `linkedin`, `reddit`, `hn`, `desktop`, `mobile` |
+| `bip capture screenshot <url> --selector <css>` | Capture just one element instead of the page |
+| `bip capture screenshot <url> --scale 2` | Retina-quality output |
+| `bip capture screenshot <url> --wait-for <css> --delay <ms>` | Wait for late-rendering content before capturing |
 | `bip capture record <url>` | Record a browser session (press Enter to stop) |
+| `bip mcp` | Start bip as an MCP server (stdio), see [MCP Server](#mcp-server) |
+
+## MCP Server
+
+`bip mcp` runs bip as an [MCP](https://modelcontextprotocol.io) server over stdio, so
+Claude Code or Claude Desktop can call it directly instead of you shelling out to a
+separate terminal. Tools exposed:
+
+| Tool | What it does |
+|------|--------------|
+| `bip_status` | Project name, platform credential status, recent drafts, cadence nudge |
+| `bip_history` | Past drafts with previews (`limit` optional) |
+| `bip_capture_screenshot` | Same options as `bip capture screenshot` (`preset`, `selector`, `scale`, `waitFor`, `delay`, `fullPage`) |
+| `bip_draft_preview` | Generates post variants from git activity (`platforms`, `provider`, `focus`). Returns them as data. Does **not** save or publish |
+
+`bip_draft_preview` never saves a draft, and there is no `bip_post` tool. The variant
+picking, editing, and platform-by-platform post/manual/skip choices in `bip draft` /
+`bip post` are interactive by design, and publishing to a real social account isn't
+something an MCP tool call should be able to trigger silently. Use the CLI for the
+actual save/publish step.
+
+Add it to Claude Desktop / Claude Code's MCP config:
+
+```json
+{
+  "mcpServers": {
+    "build-in-public": {
+      "command": "bip",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+### Claude Code skill
+
+`bip init` scaffolds `.claude/skills/build-in-public/SKILL.md` automatically. No
+separate install step. It tells Claude Code to use the MCP tools above when connected,
+fall back to the CLI otherwise, and never script or fake `bip draft`/`bip post`'s
+interactive prompts to save or publish on your behalf; that step always comes back to
+you.
 
 ## Local Data Structure
 
@@ -322,7 +371,7 @@ Package name: **`build-in-public`** (`package.json` → `files` ships `dist/`, `
    npm pack --dry-run  # inspect tarball contents
    ```
 
-2. **Login** (once per machine): `npm login` — then `npm whoami` to confirm.
+2. **Login** (once per machine): run `npm login`, then `npm whoami` to confirm.
 
 3. **Bump version** (updates `package.json` and creates a git tag if the repo is clean):
 
@@ -343,7 +392,7 @@ Package name: **`build-in-public`** (`package.json` → `files` ships `dist/`, `
 ## Requirements
 
 - **Node.js**: 18+
-- **At least one LLM API key** for draft/evolve flows — see [AI API keys](#4-ai-api-keys). Use `bip auth ai` or set the corresponding env vars manually.
+- **At least one LLM API key** for draft/evolve flows. See [AI API keys](#4-ai-api-keys). Use `bip auth ai` or set the corresponding env vars manually.
 
 ## Architecture
 

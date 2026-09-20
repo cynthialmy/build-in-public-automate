@@ -1,19 +1,7 @@
-import { readdirSync, readFileSync } from 'fs';
 import { colors, divider } from '../core/branding.js';
-import { isInitialized, postsDir } from '../config/settings.js';
+import { isInitialized } from '../config/settings.js';
+import { loadAllDrafts } from '../core/drafts.js';
 import type { DraftPost } from '../config/types.js';
-
-function loadAllDrafts(): DraftPost[] {
-  try {
-    const dir = postsDir();
-    return readdirSync(dir)
-      .filter((f) => f.endsWith('.json'))
-      .map((f) => JSON.parse(readFileSync(`${dir}/${f}`, 'utf-8')) as DraftPost)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  } catch {
-    return [];
-  }
-}
 
 const STATUS_COLOR: Record<DraftPost['status'], (s: string) => string> = {
   posted: colors.success,

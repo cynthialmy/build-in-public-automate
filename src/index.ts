@@ -18,6 +18,7 @@ import {
   captureScreenshotCommand,
   captureRecordCommand,
 } from './commands/capture.js';
+import { mcpCommand } from './commands/mcp.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json') as { version: string };
@@ -136,13 +137,40 @@ const capture = program
 
 capture
   .command('screenshot <url>')
-  .description('Take a full-page screenshot of a URL')
-  .action((url: string) => captureScreenshotCommand(url));
+  .description('Capture a screenshot of a URL')
+  .option(
+    '--preset <name>',
+    'Viewport preset: og, x, linkedin, reddit, hn, desktop, mobile (default: desktop)'
+  )
+  .option('--selector <css>', 'Crop to a single element instead of the page/viewport')
+  .option('--scale <n>', 'Device scale factor for retina output (e.g. 2)')
+  .option('--wait-for <css>', 'Wait for a selector to appear before capturing')
+  .option('--delay <ms>', 'Extra delay in ms before capturing')
+  .option('--full-page', 'Capture the full scrollable page instead of just the viewport')
+  .action(
+    (
+      url: string,
+      options: {
+        preset?: string;
+        selector?: string;
+        scale?: string;
+        waitFor?: string;
+        delay?: string;
+        fullPage?: boolean;
+      }
+    ) => captureScreenshotCommand(url, options)
+  );
 
 capture
   .command('record <url>')
   .description('Record a browser session (press Enter to stop)')
   .action((url: string) => captureRecordCommand(url));
+
+// bip mcp
+program
+  .command('mcp')
+  .description('Start bip as an MCP server (stdio) for Claude Code / Claude Desktop')
+  .action(() => mcpCommand());
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   const msg = err instanceof Error ? err.message : String(err);
