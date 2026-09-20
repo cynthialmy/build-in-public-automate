@@ -18,7 +18,7 @@ experience, not verified interviews — worth validating with real users as phas
 Each phase ships independently; order reflects leverage (small scope, high visible
 win, unlocks the next phase) rather than strict blocking dependencies.
 
-### Phase 1 — Smarter, platform-aware capture (in progress)
+### Phase 1 — Smarter, platform-aware capture (shipped)
 
 `src/capture/screenshot.ts` today: full-page Playwright dump, default viewport, no
 selector targeting, no crop, no retina, `networkidle`-only wait. Zero test coverage.
@@ -32,18 +32,37 @@ selector targeting, no crop, no retina, `networkidle`-only wait. Zero test cover
 - Test coverage for `capture/` (currently none).
 - Follow-on (not in this pass): auto-attach a capture to a draft from `bip draft`.
 
-### Phase 2 — MCP server
+### Phase 2 — MCP server (shipped, scoped down)
 
-Expose bip's capabilities (`draft`, `post`, `capture`, `status`, `history`) as MCP
-tools so bip is usable from inside Claude Code / Claude Desktop directly, not just a
-separate terminal session. Requires splitting command logic from CLI I/O so both the
-CLI and the MCP server call the same functions.
+`bip mcp` starts a stdio MCP server (`src/mcp/server.ts`) exposing:
 
-### Phase 3 — Claude Code skill / connector
+- `bip_status` / `bip_history` — read-only, no prompts, safe to call freely.
+- `bip_capture_screenshot` — same options as the Phase 1 CLI capture.
+- `bip_draft_preview` — generates post variants from git activity for one or more
+  platforms and returns them as data. Does **not** save or publish.
 
-A packaged skill/plugin that calls into the Phase 2 MCP server (or CLI as fallback),
-so `bip draft` / `bip post` work as slash-commands inside any Claude Code session.
-Likely the best distribution lever given existing real npm downloads.
+Deliberately out of scope for this phase: `bip_post` and a "save this draft" tool.
+`bip draft`/`bip post` are interactive by design (variant picking, edit-in-editor,
+platform-by-platform post/manual/skip choices, credential-backed publishing) — that
+human-in-the-loop review is the point, and an MCP tool that silently posts to X/
+LinkedIn/Reddit/HN on an agent's say-so is a real safety regression, not a
+convenience. Revisit only with an explicit confirmation step designed in, not as a
+default tool call.
+
+Provider selection also can't prompt over MCP: `resolveProviderNonInteractive`
+(`src/mcp/tools.ts`) errors instead of showing an interactive picker when multiple
+AI provider keys are set and none is passed explicitly.
+
+### Phase 3 — Claude Code skill / connector (shipped)
+
+`bip init` now scaffolds `.claude/skills/build-in-public/SKILL.md` into every project
+that runs it (from `templates/claude-skill/SKILL.md`, via `scaffoldClaudeSkill` in
+`src/core/claude-skill.ts`) — no extra install step, it rides along with the setup
+everyone already runs. The skill tells Claude Code to prefer the Phase 2 MCP tools
+when connected, fall back to the CLI otherwise, and — critically — never script or
+fake the interactive prompts in `bip draft`/`bip post` to save or publish on the
+user's behalf; that hands back to the human for the actual save/publish step, same
+boundary Phase 2 drew for the MCP tools themselves.
 
 ### Phase 4 — Review UX (not a separate web UI)
 

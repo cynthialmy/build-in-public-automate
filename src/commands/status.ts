@@ -1,9 +1,9 @@
-import { readdirSync, readFileSync } from 'fs';
 import { colors, divider, platformBadge } from '../core/branding.js';
-import { isInitialized, readConfig, postsDir } from '../config/settings.js';
+import { isInitialized, readConfig } from '../config/settings.js';
 import { hasCredentials } from '../config/credentials.js';
 import { getCadenceNudge } from '../core/cadence.js';
-import type { DraftPost, Platform } from '../config/types.js';
+import { loadAllDrafts } from '../core/drafts.js';
+import type { Platform } from '../config/types.js';
 
 const PLATFORMS: Platform[] = ['x', 'linkedin', 'reddit', 'hackernews'];
 
@@ -13,18 +13,6 @@ function timeAgo(iso: string): string {
   if (days === 0) return 'today';
   if (days === 1) return '1 day ago';
   return `${days} days ago`;
-}
-
-function loadAllDrafts(): DraftPost[] {
-  try {
-    const dir = postsDir();
-    return readdirSync(dir)
-      .filter((f) => f.endsWith('.json'))
-      .map((f) => JSON.parse(readFileSync(`${dir}/${f}`, 'utf-8')) as DraftPost)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  } catch {
-    return [];
-  }
 }
 
 export async function statusCommand(): Promise<void> {

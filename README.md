@@ -20,6 +20,7 @@ Posts improve over time — bip remembers variant preferences, learns editing pa
 - **Project Context**: `BUILD_IN_PUBLIC.md`, skills, and memory injected into prompts
 - **Draft Review**: Two variants per platform, pick/edit/skip, then save or post
 - **Capture**: Platform-sized screenshots (og/x/linkedin/reddit/hn presets, element targeting, retina scale) and browser session recordings
+- **MCP server**: `bip mcp` exposes status/history/capture/draft-preview as MCP tools for Claude Code / Claude Desktop
 - **Tests**: Vitest suite under `test/` (see [test/README.md](test/README.md))
 
 See [ROADMAP.md](ROADMAP.md) for what's next (smarter capture, MCP server, Claude Code skill).
@@ -61,6 +62,7 @@ This scaffolds into your project:
 - `.buildpublic/memory/` — posting history and preference tracking (gitignored)
 - `.buildpublic/posts/` — saved draft JSON files
 - `.buildpublic/captures/` — screenshots and videos (gitignored)
+- `.claude/skills/build-in-public/SKILL.md` — a Claude Code skill so bip works directly from Claude Code/Desktop (see [MCP Server](#mcp-server))
 
 `bip init` also asks which of a few **archetypes** best matches what you're doing (solo dev / open source, indie SaaS founder, career-visibility engineer) and pre-fills `soul.md` and the Target Audience/Preferred Platforms/Post Style sections of `BUILD_IN_PUBLIC.md` with a real starting voice for it — or pick "Start blank" for the old empty-template behavior. Either way, everything is yours to edit afterward.
 
@@ -255,6 +257,47 @@ Everything except base instructions is editable by you.
 | `bip capture screenshot <url> --scale 2` | Retina-quality output |
 | `bip capture screenshot <url> --wait-for <css> --delay <ms>` | Wait for late-rendering content before capturing |
 | `bip capture record <url>` | Record a browser session (press Enter to stop) |
+| `bip mcp` | Start bip as an MCP server (stdio) — see [MCP Server](#mcp-server) |
+
+## MCP Server
+
+`bip mcp` runs bip as an [MCP](https://modelcontextprotocol.io) server over stdio, so
+Claude Code or Claude Desktop can call it directly instead of you shelling out to a
+separate terminal. Tools exposed:
+
+| Tool | What it does |
+|------|--------------|
+| `bip_status` | Project name, platform credential status, recent drafts, cadence nudge |
+| `bip_history` | Past drafts with previews (`limit` optional) |
+| `bip_capture_screenshot` | Same options as `bip capture screenshot` (`preset`, `selector`, `scale`, `waitFor`, `delay`, `fullPage`) |
+| `bip_draft_preview` | Generates post variants from git activity (`platforms`, `provider`, `focus`) — returns them as data, does **not** save or publish |
+
+`bip_draft_preview` never saves a draft and there is no `bip_post` tool — the variant
+picking, editing, and platform-by-platform post/manual/skip choices in `bip draft` /
+`bip post` are interactive by design, and publishing to a real social account isn't
+something an MCP tool call should be able to trigger silently. Use the CLI for the
+actual save/publish step.
+
+Add it to Claude Desktop / Claude Code's MCP config:
+
+```json
+{
+  "mcpServers": {
+    "build-in-public": {
+      "command": "bip",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+### Claude Code skill
+
+`bip init` scaffolds `.claude/skills/build-in-public/SKILL.md` automatically — no
+separate install step. It tells Claude Code to use the MCP tools above when connected,
+fall back to the CLI otherwise, and never script or fake `bip draft`/`bip post`'s
+interactive prompts to save or publish on your behalf; that step always comes back to
+you.
 
 ## Local Data Structure
 

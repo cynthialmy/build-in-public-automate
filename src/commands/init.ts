@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { input, checkbox, select } from '@inquirer/prompts';
 import { readConfig, writeConfig, ensureDirectories, isInitialized, skillsDir, soulPath } from '../config/settings.js';
 import { ARCHETYPES, findArchetype, renderSoulMd, applyArchetypeToBuildDoc } from '../core/archetypes.js';
+import { scaffoldClaudeSkill } from '../core/claude-skill.js';
 import type { BipConfig, Platform } from '../config/types.js';
 
 /**
@@ -140,6 +141,12 @@ export async function initCommand(options: { force?: boolean }): Promise<void> {
     }
   }
 
+  // Scaffold the Claude Code skill so bip is usable from Claude Code/Desktop
+  // without extra setup.
+  if (scaffoldClaudeSkill(cwd, TEMPLATE_DIR, !!options.force)) {
+    console.log('  Created .claude/skills/build-in-public/SKILL.md');
+  }
+
   // Append to .gitignore
   const gitignorePath = join(cwd, '.gitignore');
   const gitignoreEntries = [
@@ -174,4 +181,7 @@ export async function initCommand(options: { force?: boolean }): Promise<void> {
   console.log('  2. Define your voice: bip soul');
   console.log('  3. Set up credentials: bip auth x');
   console.log('  4. Generate a draft: bip draft');
+  console.log(
+    '  5. (optional) Use bip from Claude Code: the build-in-public skill was scaffolded into .claude/skills/, or run `bip mcp` to connect it as an MCP server'
+  );
 }

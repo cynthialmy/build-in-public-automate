@@ -18,6 +18,7 @@ import {
   captureScreenshotCommand,
   captureRecordCommand,
 } from './commands/capture.js';
+import { mcpCommand } from './commands/mcp.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json') as { version: string };
@@ -164,6 +165,12 @@ capture
   .command('record <url>')
   .description('Record a browser session (press Enter to stop)')
   .action((url: string) => captureRecordCommand(url));
+
+// bip mcp
+program
+  .command('mcp')
+  .description('Start bip as an MCP server (stdio) for Claude Code / Claude Desktop')
+  .action(() => mcpCommand());
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   const msg = err instanceof Error ? err.message : String(err);
