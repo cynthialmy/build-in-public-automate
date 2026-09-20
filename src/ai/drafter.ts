@@ -305,6 +305,32 @@ export function extractTextFromAiResponse(response: unknown): string {
   return extractResponseText(response);
 }
 
+export interface DraftContext {
+  systemPrompt: string;
+  userPrompt: string;
+}
+
+/**
+ * Assembles the same system/user prompt `draft()` sends to an LLM provider,
+ * without calling one. Lets a coding agent that's already running (Claude
+ * Code, Cursor, Copilot, etc.) draft the post itself with the model it's
+ * already paying for, instead of bip needing its own provider API key.
+ */
+export function buildDraftContext(
+  context: GitContext,
+  platforms: Platform[],
+  options?: { focus?: string }
+): DraftContext {
+  const projectDoc = existsSync(buildPublicMdPath())
+    ? readFileSync(buildPublicMdPath(), 'utf-8')
+    : '(No BUILD_IN_PUBLIC.md found — using git context only)';
+
+  return {
+    systemPrompt: buildSystemPrompt(platforms),
+    userPrompt: buildUserPrompt(projectDoc, context, platforms, options?.focus),
+  };
+}
+
 export async function draft(
   context: GitContext,
   platforms: Platform[],
@@ -325,7 +351,10 @@ export async function draft(
         deepseek: 'export DEEPSEEK_API_KEY=your-key',
         qwen: 'export QWEN_API_KEY=your-key',
         glm: 'export GLM_API_KEY=your-key',
-      }).map(([k, v]) => `  ${k}=${v}`).join('\n')
+      }).map(([k, v]) => `  ${k}=${v}`).join('\n') + '\n\n' +
+      'Or skip an API key entirely: run `bip draft --context-only` and draft with ' +
+      'whatever coding agent you already have open (see the "Draft with your coding ' +
+      'agent" section in the README).'
     );
   }
 
@@ -334,13 +363,11 @@ export async function draft(
     maxTokens: providerConfig.maxTokens,
   });
 
-  const projectDoc = existsSync(buildPublicMdPath())
-    ? readFileSync(buildPublicMdPath(), 'utf-8')
-    : '(No BUILD_IN_PUBLIC.md found — using git context only)';
+  const { systemPrompt, userPrompt } = buildDraftContext(context, platforms, options);
 
   const message = await client.generate([
-    { role: 'system', content: buildSystemPrompt(platforms) },
-    { role: 'user', content: buildUserPrompt(projectDoc, context, platforms, options?.focus) },
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
   ]);
 
   let parsed: PlatformPost[];

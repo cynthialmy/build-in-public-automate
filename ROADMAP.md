@@ -38,13 +38,14 @@ no retina, `networkidle`-only wait, zero test coverage.
 
 - `bip_status` / `bip_history`: read-only, no prompts, safe to call freely.
 - `bip_capture_screenshot`: same options as the Phase 1 CLI capture.
-- `bip_draft_preview`: generates post variants from git activity. Does not save
-  or publish.
+- `bip_context` / `bip_save_draft`: draft with the caller's own model, save the
+  result as a real draft. See Phase 5.
+- `bip_draft_preview`: fallback that generates post variants using bip's own
+  configured LLM key. Does not save or publish.
 
-No `bip_post` tool and no way to save a draft over MCP. `bip draft` and `bip post`
-are interactive by design (variant picking, editing, per-platform confirmation
-before publishing), and an MCP tool that could post to a real account on an agent's
-say-so is a safety regression, not a convenience.
+No `bip_post` tool. `bip post` is interactive by design (variant picking, editing,
+per-platform confirmation before publishing), and an MCP tool that could post to a
+real account on an agent's say-so is a safety regression, not a convenience.
 
 Provider selection can't prompt over MCP either: `resolveProviderNonInteractive`
 (`src/mcp/tools.ts`) errors instead of showing a picker when multiple provider keys
@@ -54,15 +55,35 @@ exist and none was specified.
 
 `bip init` scaffolds `.claude/skills/build-in-public/SKILL.md` into every project
 that runs it, so there's no separate install step. The skill tells Claude Code to
-prefer the Phase 2 MCP tools when connected, fall back to the CLI otherwise, and
-never script or fake the interactive prompts in `bip draft` / `bip post` to save or
-publish on the user's behalf. That step always comes back to the human.
+prefer the MCP tools when connected, fall back to the CLI otherwise, and never
+script or fake the interactive prompts in `bip post` to publish on the user's
+behalf. Publishing always comes back to the human.
 
 ### Phase 4: Review UX, not a separate web UI
 
 A browser dashboard would add a context switch, which is the opposite of what this
 persona wants. If anything ships here, it's an inline review step before posting
 (e.g. `--dry-run`), not a new app to open. Revisit only if users ask for a UI.
+
+### Phase 5: Draft with your coding agent, not bip's own API key (shipped)
+
+Most people running bip already have a coding agent open (Claude Code, Cursor,
+Copilot, Codex). Asking them to also configure a separate LLM API key for bip is an
+extra setup step and an extra cost that doesn't match how they actually work.
+
+Split what `bip draft` did into two steps, so the drafting step can be done by
+whatever agent is already running, using the model it already has:
+
+- `bip_context` / `bip draft --context-only`: returns the git activity, project
+  context, voice, and platform strategy bip would otherwise send to an LLM
+  provider. No LLM call, no API key needed.
+- `bip_save_draft` / `bip draft --apply <file>`: saves posts drafted elsewhere as
+  a real draft, in the same shape the interactive flow produces. No LLM call.
+
+`bip draft`'s own key-based path (and `bip_draft_preview` over MCP) stays as the
+fallback for anyone without a coding agent running. `bip evolve` and
+`bip soul evolve` still need an API key either way; they are not part of this
+split.
 
 ## Cross-cutting
 

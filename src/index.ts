@@ -60,10 +60,29 @@ program
   )
   .option(
     '--preview',
-    'Generate one post without running `bip init` first — needs only an LLM API key, saves nothing'
+    'Generate one post without running `bip init` first. Needs only an LLM API key, saves nothing'
   )
-  .action((options: { platforms?: string; provider?: string; preview?: boolean }) =>
-    draftCommand(options)
+  .option(
+    '--focus <text>',
+    'What this post should emphasize (used with --context-only or the interactive flow)'
+  )
+  .option(
+    '--context-only',
+    'Print the draft context as JSON and exit. No LLM key needed: draft with your own coding agent, then `bip draft --apply <file>`'
+  )
+  .option(
+    '--apply <file>',
+    'Save posts drafted elsewhere (a JSON file of { posts, attachments }) as a real draft. No LLM key needed'
+  )
+  .action(
+    (options: {
+      platforms?: string;
+      provider?: string;
+      preview?: boolean;
+      focus?: string;
+      contextOnly?: boolean;
+      apply?: string;
+    }) => draftCommand(options)
   );
 
 // bip post [platform]
