@@ -205,7 +205,16 @@ capture
 capture
   .command('record <url>')
   .description('Record a browser session (press Enter to stop)')
-  .action((url: string) => captureRecordCommand(url));
+  .option(
+    '--format <format>',
+    'Output format: webm, mp4, or gif (default: webm). mp4/gif need ffmpeg installed'
+  )
+  .option('--gif-width <px>', 'GIF width in pixels, height scales to match (default: 480)')
+  .option('--gif-fps <n>', 'GIF frame rate (default: 10)')
+  .action(
+    (url: string, options: { format?: string; gifWidth?: string; gifFps?: string }) =>
+      captureRecordCommand(url, options)
+  );
 
 // bip mcp
 program

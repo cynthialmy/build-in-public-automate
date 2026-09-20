@@ -49,7 +49,7 @@ Posts improve over time: bip remembers variant preferences, learns editing patte
 - **Voice**: `bip soul` and `bip soul evolve` refine `soul.md` from your behavior
 - **Project Context**: `BUILD_IN_PUBLIC.md`, skills, and memory injected into prompts
 - **Draft Review**: Two variants per platform, pick/edit/skip, then save or post
-- **Capture**: Platform-sized screenshots (og/x/linkedin/reddit/hn presets, element targeting, retina scale) and browser session recordings
+- **Capture**: Platform-sized screenshots (og/x/linkedin/reddit/hn presets, element targeting, retina scale) and browser session recordings, exportable to mp4 or GIF
 - **MCP server**: `bip mcp` exposes status/history/capture/draft-preview as MCP tools for Claude Code / Claude Desktop
 - **Tests**: Vitest suite under `test/` (see [test/README.md](test/README.md))
 
@@ -323,7 +323,9 @@ Everything except base instructions is editable by you.
 | `bip capture screenshot <url> --selector <css>` | Capture just one element instead of the page |
 | `bip capture screenshot <url> --scale 2` | Retina-quality output |
 | `bip capture screenshot <url> --wait-for <css> --delay <ms>` | Wait for late-rendering content before capturing |
-| `bip capture record <url>` | Record a browser session (press Enter to stop) |
+| `bip capture record <url>` | Record a browser session as webm (press Enter to stop) |
+| `bip capture record <url> --format mp4` | Same, then convert to mp4 (needs `ffmpeg`) |
+| `bip capture record <url> --format gif` | Same, then convert to a GIF (needs `ffmpeg`; `--gif-width`, `--gif-fps` to tune it) |
 | `bip mcp` | Start bip as an MCP server (stdio), see [MCP Server](#mcp-server) |
 
 ## MCP Server
@@ -467,6 +469,7 @@ Package name: **`build-in-public`** (`package.json` → `files` ships `dist/`, `
 
 - **Node.js**: 18+
 - **Either a coding agent** (Claude Code, Cursor, Copilot, Codex) **or at least one LLM API key** for drafting, evolving BUILD_IN_PUBLIC.md, and evolving soul.md. See [AI Drafting](#4-ai-drafting).
+- **`ffmpeg`** only if you use `bip capture record --format mp4` or `--format gif`. Plain `bip capture record` (webm) and all screenshots work without it.
 
 ## Architecture
 

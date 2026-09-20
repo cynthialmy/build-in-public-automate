@@ -1,9 +1,14 @@
-import { join } from 'path';
+import { renameSync } from 'fs';
+import { join, dirname } from 'path';
 import ora from 'ora';
 import chalk from 'chalk';
 import { isInitialized, capturesDir, ensureDirectories } from '../config/settings.js';
 import { captureScreenshot, VIEWPORT_PRESETS, type ViewportPreset } from '../capture/screenshot.js';
 import { startRecording, stopRecording } from '../capture/recorder.js';
+import { convertToMp4, convertToGif, describeFfmpegError } from '../capture/convert.js';
+
+const RECORDING_FORMATS = ['webm', 'mp4', 'gif'] as const;
+type RecordingFormat = (typeof RECORDING_FORMATS)[number];
 
 export interface CaptureScreenshotCommandOptions {
   preset?: string;
@@ -52,9 +57,24 @@ export async function captureScreenshotCommand(
   }
 }
 
-export async function captureRecordCommand(url: string): Promise<void> {
+export interface CaptureRecordCommandOptions {
+  format?: string;
+  gifWidth?: string;
+  gifFps?: string;
+}
+
+export async function captureRecordCommand(
+  url: string,
+  options: CaptureRecordCommandOptions = {}
+): Promise<void> {
   if (!isInitialized()) {
     console.error('bip is not initialized. Run `bip init` first.');
+    process.exit(1);
+  }
+
+  const format = (options.format ?? 'webm') as RecordingFormat;
+  if (!RECORDING_FORMATS.includes(format)) {
+    console.error(`Unknown format "${options.format}". Choose one of: ${RECORDING_FORMATS.join(', ')}`);
     process.exit(1);
   }
 
@@ -72,11 +92,33 @@ export async function captureRecordCommand(url: string): Promise<void> {
     });
 
     const stopSpinner = ora('Stopping recording...').start();
-    const videoPath = await stopRecording();
-    if (videoPath) {
-      stopSpinner.succeed(`Recording saved: ${chalk.green(videoPath)}`);
-    } else {
+    const rawVideoPath = await stopRecording();
+    if (!rawVideoPath) {
       stopSpinner.warn('Recording stopped but no video path returned.');
+      return;
+    }
+
+    // Playwright names the file with an opaque hash. Give it a
+    // predictable, timestamped name like every other capture.
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const webmPath = join(dirname(rawVideoPath), `recording-${timestamp}.webm`);
+    renameSync(rawVideoPath, webmPath);
+    stopSpinner.succeed(`Recording saved: ${chalk.green(webmPath)}`);
+
+    if (format === 'webm') return;
+
+    const convertSpinner = ora(`Converting to ${format}...`).start();
+    try {
+      const outPath =
+        format === 'mp4'
+          ? await convertToMp4(webmPath, webmPath.replace(/\.webm$/, '.mp4'))
+          : await convertToGif(webmPath, webmPath.replace(/\.webm$/, '.gif'), {
+              width: options.gifWidth ? Number(options.gifWidth) : undefined,
+              fps: options.gifFps ? Number(options.gifFps) : undefined,
+            });
+      convertSpinner.succeed(`${format} saved: ${chalk.green(outPath)}`);
+    } catch (err) {
+      convertSpinner.fail(`Conversion to ${format} failed: ${describeFfmpegError(err)}`);
     }
   } catch (err) {
     spinner.fail('Recording failed');
