@@ -5,7 +5,36 @@
 [![node](https://img.shields.io/node/v/build-in-public)](https://nodejs.org)
 [![vitest](https://img.shields.io/badge/tests-vitest-6E9F18?logo=vitest)](https://vitest.dev)
 
-Share your progress to X, LinkedIn, Reddit, and HackerNews from your terminal. `bip` reads your git activity, generates platform-tailored posts with your chosen **LLM provider** (Anthropic, OpenAI, GLM, and others), and publishes via official APIs or browser automation.
+Turn your coding sessions into shareable progress updates, straight from your git history. Works with Claude Code, Cursor, Copilot, Codex, or bip's own LLM key.
+
+```bash
+npm install -g build-in-public
+```
+
+**Input** (your git activity):
+
+```
+$ bip draft
+Reading last 20 commits...
+  feat: add retina screenshot presets
+  fix: handle expired reddit tokens
+```
+
+**Generated post** (X, one of two variants):
+
+```
+Shipped retina-quality screenshot presets for social captures today.
+Also fixed a silent token-expiry bug on the Reddit posting path.
+
+Small releases, steady progress.
+```
+
+**Publishing:**
+
+```
+$ bip post x
+Posting to X... done. https://x.com/you/status/...
+```
 
 Posts improve over time: bip remembers variant preferences, learns editing patterns, and adapts voice to match yours.
 
