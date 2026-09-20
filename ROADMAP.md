@@ -30,7 +30,9 @@ selector targeting, no crop, no retina, `networkidle`-only wait. Zero test cover
 - Retina/scale support (`--scale`).
 - Wait strategies beyond `networkidle`: `--wait-for <selector>`, `--delay <ms>`.
 - Test coverage for `capture/` (currently none).
-- Follow-on (not in this pass): auto-attach a capture to a draft from `bip draft`.
+- Follow-on (shipped): `bip draft`'s and `bip post`'s screenshot-attach prompts now
+  crop to the platform(s) actually being posted to (`PLATFORM_PRESET` mapping in
+  `draft.ts`/`post.ts`) instead of a generic full-page desktop dump.
 
 ### Phase 2 — MCP server (shipped, scoped down)
 

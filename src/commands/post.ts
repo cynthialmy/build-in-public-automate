@@ -7,7 +7,7 @@ import { colors } from '../core/branding.js';
 import { isInitialized, postsDir, capturesDir, updateConfig } from '../config/settings.js';
 import { recordPostResult } from '../memory/index.js';
 import { getHeadSha } from '../ai/git.js';
-import { captureScreenshot, describeScreenshotError } from '../capture/screenshot.js';
+import { captureScreenshot, describeScreenshotError, type ViewportPreset } from '../capture/screenshot.js';
 import { saveManualExport } from './manual-export.js';
 import type { DraftPost, Platform, PlatformPost } from '../config/types.js';
 import { TwitterPlatform } from '../platforms/twitter.js';
@@ -25,6 +25,14 @@ const PLATFORMS: Record<Platform, IPlatform> = {
 
 const X_CHAR_LIMIT = 280;
 const LINKEDIN_WORD_LIMIT = 700;
+
+/** Which capture preset matches each platform's card/preview dimensions. */
+const PLATFORM_PRESET: Record<Platform, ViewportPreset> = {
+  x: 'x',
+  linkedin: 'linkedin',
+  reddit: 'reddit',
+  hackernews: 'hn',
+};
 
 function charCount(post: PlatformPost): string {
   if (post.platform === 'x') {
@@ -67,7 +75,7 @@ function saveDraft(draft: DraftPost): void {
 }
 
 /** Offers to capture a screenshot on the spot, for a manual export that has none yet. */
-async function maybeCaptureScreenshot(): Promise<string[]> {
+async function maybeCaptureScreenshot(platform: Platform): Promise<string[]> {
   const wantScreenshot = await confirm({
     message: 'Grab a screenshot to include? (opens a URL and saves a PNG)',
     default: false,
@@ -79,7 +87,7 @@ async function maybeCaptureScreenshot(): Promise<string[]> {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const outPath = join(capturesDir(), `screenshot-${timestamp}.png`);
   try {
-    const saved = await captureScreenshot(url, outPath);
+    const saved = await captureScreenshot(url, outPath, { preset: PLATFORM_PRESET[platform] });
     spinner.succeed(`Screenshot saved: ${saved}`);
     return [saved];
   } catch (err) {
@@ -190,7 +198,7 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
     if (action === 'skip') continue;
 
     if (action === 'manual') {
-      const extra = await maybeCaptureScreenshot();
+      const extra = await maybeCaptureScreenshot(post.platform);
       const dir = saveManualExport(draft.id, post, [...attachments, ...extra]);
       draft.manualExports = { ...draft.manualExports, [post.platform]: dir };
       console.log(
@@ -239,7 +247,7 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
         default: true,
       });
       if (fallbackToManual) {
-        const extra = await maybeCaptureScreenshot();
+        const extra = await maybeCaptureScreenshot(post.platform);
         const dir = saveManualExport(draft.id, post, [...attachments, ...extra]);
         draft.manualExports = { ...draft.manualExports, [post.platform]: dir };
         console.log(

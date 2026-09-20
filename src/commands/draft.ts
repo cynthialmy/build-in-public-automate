@@ -19,7 +19,7 @@ import {
 import { resolveAiProviderForSession } from '../ai/provider-choice.js';
 import { isGitRepo, getContext } from '../ai/git.js';
 import { draft as draftPosts } from '../ai/drafter.js';
-import { captureScreenshot, describeScreenshotError } from '../capture/screenshot.js';
+import { captureScreenshot, describeScreenshotError, type ViewportPreset } from '../capture/screenshot.js';
 import { recordVariantChoice, updatePreferences, getPostingHistory } from '../memory/index.js';
 import { checkStaleness } from './evolve.js';
 import { getCadenceNudge } from '../core/cadence.js';
@@ -30,6 +30,14 @@ const PLATFORM_LABELS: Record<Platform, string> = {
   linkedin: 'LinkedIn',
   reddit: 'Reddit',
   hackernews: 'HackerNews',
+};
+
+/** Which capture preset matches each platform's card/preview dimensions. */
+const PLATFORM_PRESET: Record<Platform, ViewportPreset> = {
+  x: 'x',
+  linkedin: 'linkedin',
+  reddit: 'reddit',
+  hackernews: 'hn',
 };
 
 function formatPost(post: PlatformPost): string {
@@ -353,11 +361,25 @@ export async function draftCommand(options: {
 
   if (wantScreenshot) {
     const url = await input({ message: 'URL to screenshot:' });
+
+    // Crop to whichever platform(s) this draft is actually going to, instead
+    // of always taking a generic full-page desktop dump.
+    const presetChoices = Array.from(
+      new Set(accepted.map((p) => PLATFORM_PRESET[p.platform]))
+    ) as ViewportPreset[];
+    const preset =
+      presetChoices.length > 1
+        ? await select<ViewportPreset>({
+            message: 'Crop the screenshot for which platform?',
+            choices: presetChoices.map((p) => ({ name: p, value: p })),
+          })
+        : presetChoices[0];
+
     const ssSpinner = ora('Capturing screenshot...').start();
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const outPath = join(capturesDir(), `screenshot-${timestamp}.png`);
     try {
-      const saved = await captureScreenshot(url, outPath);
+      const saved = await captureScreenshot(url, outPath, { preset });
       ssSpinner.succeed(`Screenshot saved: ${saved}`);
       attachments.push(saved);
     } catch (err) {
