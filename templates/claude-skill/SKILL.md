@@ -13,8 +13,9 @@ turn git activity into platform-tailored social posts.
 - The user asks to draft a post about recent work, share progress, or "post an update"
 - The user asks about draft/post history, or which platforms have credentials set up
 - The user wants a screenshot sized for a specific platform (og/x/linkedin/reddit/hn)
+- The user asks to evolve BUILD_IN_PUBLIC.md or soul.md
 
-## Drafting: use your own model, not bip's
+## Drafting, evolving BUILD_IN_PUBLIC.md, evolving soul.md: use your own model, not bip's
 
 You are already a coding agent with a model attached, so draft the post yourself
 instead of asking bip to call its own LLM provider. That needs no extra API key and
@@ -34,9 +35,19 @@ Without MCP, do the same over the CLI: `bip draft --context-only` prints the sam
 context as JSON, then `bip draft --apply <file>` saves a JSON file shaped like
 `{ "posts": [...], "attachments": [...] }`.
 
-Only fall back to bip's own key-based drafting (`bip_draft_preview`, or
-`bip draft` without `--context-only`/`--apply`) if the user has no coding agent
-available and wants bip to draft on its own.
+`bip evolve` (updates BUILD_IN_PUBLIC.md) and `bip soul evolve` (updates soul.md)
+work the same way:
+
+- `bip_evolve_context` / `bip evolve --context-only`, then write the updated
+  doc yourself, then `bip_evolve_apply` / `bip evolve --apply <file>` (a text file
+  with the full updated content) to save it.
+- `bip_soul_context` / `bip soul evolve --context-only`, then write the updated
+  soul.md yourself, then `bip_soul_apply` / `bip soul evolve --apply <file>` to
+  save it.
+
+Only fall back to bip's own key-based generation (`bip_draft_preview`, or any of
+these commands without `--context-only`/`--apply`) if the user has no coding agent
+available and wants bip to draft or evolve on its own.
 
 ## Other tools
 

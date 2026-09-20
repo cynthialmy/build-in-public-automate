@@ -11,7 +11,8 @@ import {
 } from '../ai/providers.js';
 import { resolveAiProviderForSession } from '../ai/provider-choice.js';
 import { getEditDiffs, getPostingHistory } from '../memory/index.js';
-import { evolveSoul } from '../ai/evolver.js';
+import { evolveSoul, stampEvolvedDate } from '../ai/evolver.js';
+import { getSoulEvolveContext, applyEvolvedSoul } from '../mcp/tools.js';
 
 export async function soulCommand(): Promise<void> {
   if (!isInitialized()) {
@@ -123,10 +124,36 @@ ${examplePost.trim() || '<!-- paste an example post here -->'}
 
 export async function soulEvolveCommand(options: {
   provider?: string;
+  contextOnly?: boolean;
+  apply?: string;
 } = {}): Promise<void> {
   if (!isInitialized()) {
     console.error('bip is not initialized. Run `bip init` first.');
     process.exit(1);
+  }
+
+  // --context-only and --apply are the "evolve with your coding agent"
+  // path: no LLM key needed. Same split as `bip draft`.
+  if (options.contextOnly) {
+    try {
+      console.log(JSON.stringify(getSoulEvolveContext(), null, 2));
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+    return;
+  }
+
+  if (options.apply) {
+    try {
+      const content = readFileSync(options.apply, 'utf-8');
+      const saved = applyEvolvedSoul(content);
+      console.log(chalk.green(`soul.md evolved: ${saved.path}`));
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+    return;
   }
 
   if (listAvailableProviders().length === 0) {
@@ -201,11 +228,7 @@ export async function soulEvolveCommand(options: {
     });
   }
 
-  // Update the evolved date
-  finalContent = finalContent.replace(
-    /<!-- Last evolved: .* -->/,
-    `<!-- Last evolved: ${new Date().toISOString().slice(0, 10)} -->`
-  );
+  finalContent = stampEvolvedDate(finalContent);
 
   writeFileSync(path, finalContent, 'utf-8');
   console.log(chalk.green('soul.md evolved!'));
