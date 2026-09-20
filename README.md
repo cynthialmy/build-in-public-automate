@@ -12,7 +12,8 @@ Posts improve over time: bip remembers variant preferences, learns editing patte
 ## Features
 
 - **Multi-provider AI**: HTTP-based drafting with a unified prompt pipeline across Anthropic (Claude), Zhipu GLM, OpenAI, Google Gemini, Cohere, DeepSeek, and Qwen
-- **CLI setup for API keys**: `bip auth ai` writes keys into the project `.env` (see [AI API keys](#ai-api-keys))
+- **Draft with your coding agent**: no API key needed if you're already running Claude Code, Cursor, Copilot, or Codex (see [AI Drafting](#4-ai-drafting))
+- **CLI setup for API keys**: `bip auth ai` writes keys into the project `.env`, if you want bip to draft on its own instead (see [AI Drafting](#4-ai-drafting))
 - **Multi-Platform Posting**: X, LinkedIn, Reddit, HackerNews with per-platform strategies
 - **Smart Memory**: Tracks preferences, edit patterns, and avoids repetition
 - **Browser Fallback**: Playwright when APIs fail; HackerNews uses automation (no submit API)
@@ -97,9 +98,32 @@ Each platform has a strategy file in `.buildpublic/skills/`:
 
 Edit these files to change how bip writes for each platform. They're injected directly into the AI prompt.
 
-### 4. AI API keys
+### 4. AI Drafting
 
-`bip draft`, `bip evolve`, and `bip soul evolve` need **at least one** provider key in the environment.
+`bip draft` can write posts two ways: with a coding agent you already have running, or with its own LLM API key. Pick whichever fits.
+
+**Recommended: draft with your coding agent, no API key needed.** If you're already running Claude Code, Cursor, Copilot, Codex, or similar, let it draft the post with the model you already have:
+
+```bash
+bip draft --context-only               # prints git activity + project context + voice as JSON, no LLM call
+# hand that to your coding agent, ask it to write the post
+bip draft --apply variants.json        # saves what it wrote as a real draft, no LLM call
+```
+
+`variants.json` looks like:
+
+```json
+{
+  "posts": [
+    { "platform": "x", "text": "Shipped platform-aware screenshot presets today..." }
+  ],
+  "attachments": []
+}
+```
+
+If the agent speaks MCP (see [MCP Server](#mcp-server)), it can call `bip_context` and `bip_save_draft` directly instead of shelling out. Either way, this saves a draft; `bip post` is still the step that reviews and publishes it.
+
+**Alternative: bip drafts on its own**, if you don't have a coding agent running. This needs **at least one** provider key in the environment (also required for `bip evolve` and `bip soul evolve`).
 
 **Recommended: interactive setup** (writes or updates `./.env` in the project root):
 
@@ -239,9 +263,11 @@ Everything except base instructions is editable by you.
 | `bip auth ai [provider]` | Save an LLM API key into `.env` (`--list` to show status) |
 | `bip auth <platform>` | Save credentials for `x`, `linkedin`, `reddit`, or `hackernews` |
 | `bip auth --list` | Show credential status for all **social** platforms |
-| `bip draft` | Generate 2 post variants per platform from git activity |
+| `bip draft` | Generate 2 post variants per platform from git activity (needs an LLM key) |
 | `bip draft --provider <id>` | Force provider when multiple API keys exist |
 | `bip draft --preview` | See one generated post with only an LLM key, no `bip init` needed, nothing saved |
+| `bip draft --context-only` | Print the draft context as JSON, no LLM key needed, for drafting with your own coding agent |
+| `bip draft --apply <file>` | Save posts drafted elsewhere (a JSON file of `{ posts, attachments }`) as a real draft |
 | `bip post [platform]` | Publish latest draft (optionally to one platform) |
 | `bip post --dry-run` | Preview posts with character counts, no API calls |
 | `bip soul` | Interactive questionnaire to create or redo soul.md |
@@ -270,13 +296,15 @@ separate terminal. Tools exposed:
 | `bip_status` | Project name, platform credential status, recent drafts, cadence nudge |
 | `bip_history` | Past drafts with previews (`limit` optional) |
 | `bip_capture_screenshot` | Same options as `bip capture screenshot` (`preset`, `selector`, `scale`, `waitFor`, `delay`, `fullPage`) |
-| `bip_draft_preview` | Generates post variants from git activity (`platforms`, `provider`, `focus`). Returns them as data. Does **not** save or publish |
+| `bip_context` | Recommended way to draft. Returns the git activity, project context, voice, and platform strategy bip would send to an LLM, without calling one. Draft the post yourself, then save it with `bip_save_draft` |
+| `bip_save_draft` | Saves posts you drafted (`posts`, `attachments` optional) as a real draft. Does **not** publish |
+| `bip_draft_preview` | Fallback when no coding agent is available: generates post variants using bip's own configured LLM key (`platforms`, `provider`, `focus`). Does **not** save or publish |
 
-`bip_draft_preview` never saves a draft, and there is no `bip_post` tool. The variant
-picking, editing, and platform-by-platform post/manual/skip choices in `bip draft` /
-`bip post` are interactive by design, and publishing to a real social account isn't
-something an MCP tool call should be able to trigger silently. Use the CLI for the
-actual save/publish step.
+There is no `bip_post` tool, and none of these tools save a draft except
+`bip_save_draft`. The variant picking, editing, and platform-by-platform
+post/manual/skip choices in `bip post` are interactive by design, and publishing to
+a real social account isn't something an MCP tool call should be able to trigger
+silently. Use the CLI for the actual publish step.
 
 Add it to Claude Desktop / Claude Code's MCP config:
 
@@ -392,7 +420,7 @@ Package name: **`build-in-public`** (`package.json` → `files` ships `dist/`, `
 ## Requirements
 
 - **Node.js**: 18+
-- **At least one LLM API key** for draft/evolve flows. See [AI API keys](#4-ai-api-keys). Use `bip auth ai` or set the corresponding env vars manually.
+- **Either a coding agent** (Claude Code, Cursor, Copilot, Codex) **or at least one LLM API key** for drafting. `bip evolve`/`bip soul evolve` need an API key regardless. See [AI Drafting](#4-ai-drafting).
 
 ## Architecture
 

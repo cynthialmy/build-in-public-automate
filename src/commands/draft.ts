@@ -1,4 +1,4 @@
-import { writeFileSync } from 'fs';
+import { writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { select, confirm, editor, input } from '@inquirer/prompts';
 import ora from 'ora';
@@ -23,6 +23,7 @@ import { captureScreenshot, describeScreenshotError, type ViewportPreset } from 
 import { recordVariantChoice, updatePreferences, getPostingHistory } from '../memory/index.js';
 import { checkStaleness } from './evolve.js';
 import { getCadenceNudge } from '../core/cadence.js';
+import { getDraftContext, runSaveDraft } from '../mcp/tools.js';
 import type { DraftPost, GitContext, Platform, PlatformPost } from '../config/types.js';
 
 const PLATFORM_LABELS: Record<Platform, string> = {
@@ -168,7 +169,51 @@ export async function draftCommand(options: {
   platforms?: string;
   provider?: string;
   preview?: boolean;
+  focus?: string;
+  contextOnly?: boolean;
+  apply?: string;
 }): Promise<void> {
+  // --context-only and --apply are the "draft with your coding agent"
+  // path: no LLM key needed. --context-only prints the same context bip
+  // would send to a provider, for the calling agent to draft with its own
+  // model. --apply saves what that agent drafted, in the same shape the
+  // interactive flow below saves. Neither calls bip's own AI provider.
+  if (options.contextOnly) {
+    if (!(await isGitRepo())) {
+      console.error('This directory is not a git repository.');
+      process.exit(1);
+    }
+    const platforms = options.platforms
+      ? (options.platforms.split(',').map((p) => p.trim()) as Platform[])
+      : undefined;
+    const result = await getDraftContext({ platforms, focus: options.focus });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (options.apply) {
+    if (!isInitialized()) {
+      console.error('bip is not initialized. Run `bip init` first.');
+      process.exit(1);
+    }
+    let payload: { posts: PlatformPost[]; attachments?: string[] };
+    try {
+      payload = JSON.parse(readFileSync(options.apply, 'utf-8'));
+    } catch (err) {
+      console.error(`Could not read/parse ${options.apply} as JSON: ${err instanceof Error ? err.message : err}`);
+      process.exit(1);
+    }
+    try {
+      const saved = runSaveDraft(payload);
+      console.log(`\nDraft saved: ${chalk.green(saved.path)}`);
+      console.log(`\nRun ${chalk.cyan('bip post')} to publish.`);
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+    return;
+  }
+
   // --preview intentionally skips `bip init` entirely: it's the fastest way
   // to see what bip would write, with only an LLM key, before setting up
   // .buildpublic/, soul.md, or any social platform credentials.

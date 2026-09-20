@@ -1,10 +1,11 @@
 import { join } from 'path';
-import { isInitialized, readConfig, capturesDir, ensureDirectories } from '../config/settings.js';
+import { isInitialized, readConfig, capturesDir, postsDir, ensureDirectories } from '../config/settings.js';
 import { hasCredentials } from '../config/credentials.js';
 import { getCadenceNudge } from '../core/cadence.js';
 import { loadAllDrafts } from '../core/drafts.js';
 import { isGitRepo, getContext } from '../ai/git.js';
-import { draft as draftPosts } from '../ai/drafter.js';
+import { draft as draftPosts, buildDraftContext } from '../ai/drafter.js';
+import { saveNewDraft } from '../core/drafts.js';
 import {
   captureScreenshot,
   describeScreenshotError,
@@ -180,4 +181,74 @@ export async function runDraftPreview(input: DraftPreviewInput = {}): Promise<Dr
   });
 
   return { provider, variants };
+}
+
+export interface DraftContextInput {
+  platforms?: Platform[];
+  focus?: string;
+}
+
+export interface DraftContextResult {
+  platforms: Platform[];
+  systemPrompt: string;
+  userPrompt: string;
+}
+
+/**
+ * Assembles the git activity, project context, voice, and platform strategy
+ * bip would normally send to its own LLM provider, without calling one.
+ * Meant for a coding agent that is already running (Claude Code, Cursor,
+ * Copilot) to draft the post itself with the model it already has, instead
+ * of bip needing its own separate API key and cost.
+ */
+export async function getDraftContext(input: DraftContextInput = {}): Promise<DraftContextResult> {
+  if (!(await isGitRepo())) {
+    throw new Error('This directory is not a git repository.');
+  }
+
+  const config = isInitialized() ? readConfig() : undefined;
+  const platforms = input.platforms?.length ? input.platforms : ALL_PLATFORMS;
+
+  const context = await getContext(20, { baseline: config?.lastPostedSha });
+  const { systemPrompt, userPrompt } = buildDraftContext(context, platforms, {
+    focus: input.focus?.trim() || undefined,
+  });
+
+  return { platforms, systemPrompt, userPrompt };
+}
+
+export interface SaveDraftInput {
+  posts: PlatformPost[];
+  attachments?: string[];
+}
+
+export interface SaveDraftResult {
+  id: string;
+  path: string;
+}
+
+/**
+ * Saves agent-authored posts as a real draft, in the same shape `bip draft`
+ * produces interactively. Does not publish anything: `bip post` (or the
+ * platform post/manual/skip flow inside it) is still required to actually
+ * publish, same boundary as the rest of the MCP surface.
+ */
+export function runSaveDraft(input: SaveDraftInput): SaveDraftResult {
+  requireInitialized();
+
+  if (!Array.isArray(input.posts) || input.posts.length === 0) {
+    throw new Error('posts must be a non-empty array of platform posts.');
+  }
+  for (const post of input.posts) {
+    if (!ALL_PLATFORMS.includes(post.platform)) {
+      throw new Error(`Unknown platform "${post.platform}". Valid: ${ALL_PLATFORMS.join(', ')}`);
+    }
+    if (!post.text?.trim()) {
+      throw new Error(`Post for platform "${post.platform}" is missing text.`);
+    }
+  }
+
+  ensureDirectories();
+  const savedDraft = saveNewDraft(input.posts, input.attachments ?? []);
+  return { id: savedDraft.id, path: join(postsDir(), `${savedDraft.id}.json`) };
 }

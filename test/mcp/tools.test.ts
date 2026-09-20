@@ -4,12 +4,15 @@ import * as credentials from '../../src/config/credentials.js';
 import * as providers from '../../src/ai/providers.js';
 import * as git from '../../src/ai/git.js';
 import * as drafter from '../../src/ai/drafter.js';
+import { readFileSync } from 'fs';
 import {
   getStatusData,
   getHistoryData,
   resolveProviderNonInteractive,
   runCaptureScreenshot,
   runDraftPreview,
+  getDraftContext,
+  runSaveDraft,
 } from '../../src/mcp/tools.js';
 
 vi.mock('../../src/config/credentials.js', () => ({
@@ -135,5 +138,91 @@ describe('runDraftPreview', () => {
     const result = await runDraftPreview({ platforms: ['x'] });
     expect(result.provider).toBe('anthropic');
     expect(result.variants).toBe(variants);
+  });
+});
+
+describe('getDraftContext', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('rejects when not inside a git repo', async () => {
+    vi.spyOn(git, 'isGitRepo').mockResolvedValue(false);
+    await expect(getDraftContext()).rejects.toThrow(/not a git repository/);
+  });
+
+  it('builds a system/user prompt without calling any AI provider', async () => {
+    vi.spyOn(git, 'isGitRepo').mockResolvedValue(true);
+    vi.spyOn(git, 'getContext').mockResolvedValue({
+      branch: 'main',
+      commits: ['abc123 2026-01-01 feat: add thing'],
+      changedFiles: ['a.ts'],
+      diff: '',
+      linesAdded: 1,
+      linesRemoved: 0,
+      commitsByType: {},
+    });
+    const draftSpy = vi.spyOn(drafter, 'draft');
+
+    const result = await getDraftContext({ platforms: ['x'], focus: 'the new capture presets' });
+
+    expect(result.platforms).toEqual(['x']);
+    expect(result.systemPrompt).toContain('build in public');
+    expect(result.userPrompt).toContain('the new capture presets');
+    expect(draftSpy).not.toHaveBeenCalled();
+  });
+
+  it('defaults to all platforms when none are given', async () => {
+    vi.spyOn(git, 'isGitRepo').mockResolvedValue(true);
+    vi.spyOn(git, 'getContext').mockResolvedValue({
+      branch: 'main',
+      commits: [],
+      changedFiles: [],
+      diff: '',
+      linesAdded: 0,
+      linesRemoved: 0,
+      commitsByType: {},
+    });
+    const result = await getDraftContext();
+    expect(result.platforms).toEqual(['x', 'linkedin', 'reddit', 'hackernews']);
+  });
+});
+
+describe('runSaveDraft', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ensureDirectories();
+    writeConfig({
+      projectName: 'test-project',
+      platforms: {},
+      postsDir: '.buildpublic-test/posts',
+      capturesDir: '.buildpublic-test/captures',
+    });
+  });
+
+  it('rejects an empty posts array', () => {
+    expect(() => runSaveDraft({ posts: [] })).toThrow(/non-empty array/);
+  });
+
+  it('rejects an unknown platform', () => {
+    expect(() =>
+      runSaveDraft({ posts: [{ platform: 'bluesky' as never, text: 'hi' }] })
+    ).toThrow(/Unknown platform/);
+  });
+
+  it('rejects a post with no text', () => {
+    expect(() => runSaveDraft({ posts: [{ platform: 'x', text: '  ' }] })).toThrow(/missing text/);
+  });
+
+  it('saves agent-authored posts as a real draft on disk', () => {
+    const result = runSaveDraft({
+      posts: [{ platform: 'x', text: 'shipped the new capture presets today' }],
+      attachments: ['/tmp/shot.png'],
+    });
+
+    expect(result.id).toMatch(/^draft-/);
+    const saved = JSON.parse(readFileSync(result.path, 'utf-8'));
+    expect(saved.status).toBe('draft');
+    expect(saved.postedTo).toEqual([]);
+    expect(saved.posts).toEqual([{ platform: 'x', text: 'shipped the new capture presets today' }]);
+    expect(saved.attachments).toEqual(['/tmp/shot.png']);
   });
 });

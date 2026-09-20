@@ -7,6 +7,8 @@ import {
   getHistoryData,
   runCaptureScreenshot,
   runDraftPreview,
+  getDraftContext,
+  runSaveDraft,
 } from './tools.js';
 
 const PRESET_NAMES = Object.keys(VIEWPORT_PRESETS) as [string, ...string[]];
@@ -89,10 +91,56 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
+    'bip_context',
+    {
+      description:
+        'Recommended way to draft: assembles the git activity, project context, voice, and platform strategy bip would send to an LLM, without calling one. Draft the post yourself using this data and your own model, then save it with bip_save_draft.',
+      inputSchema: {
+        platforms: z.array(z.enum(PLATFORM_NAMES)).optional().describe('Defaults to all platforms'),
+        focus: z.string().optional().describe('What this post should emphasize'),
+      },
+    },
+    async (input) => {
+      try {
+        return textResult(await getDraftContext(input));
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  const platformPostSchema = z.object({
+    platform: z.enum(PLATFORM_NAMES),
+    text: z.string().min(1),
+    threadParts: z.array(z.string()).optional().describe('X threads only'),
+    title: z.string().optional().describe('Reddit/HackerNews only'),
+    url: z.string().optional().describe('HackerNews link posts only'),
+  });
+
+  server.registerTool(
+    'bip_save_draft',
+    {
+      description:
+        'Save posts you drafted (with bip_context) as a real bip draft. Does not publish anything: use `bip post` to review and publish it.',
+      inputSchema: {
+        posts: z.array(platformPostSchema).min(1),
+        attachments: z.array(z.string()).optional().describe('File paths, e.g. from bip_capture_screenshot'),
+      },
+    },
+    async (input) => {
+      try {
+        return textResult(runSaveDraft(input));
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
     'bip_draft_preview',
     {
       description:
-        'Generate post drafts from recent git activity for one or more platforms, without saving or publishing anything. Use bip_status/bip_history to inspect saved drafts, and the bip CLI (`bip draft`, `bip post`) to actually save and publish — those steps require interactive review.',
+        'Fallback for when no coding agent is available: generates post drafts from recent git activity using bip\'s own configured LLM key, without saving or publishing anything. Prefer bip_context + bip_save_draft when a coding agent is already running.',
       inputSchema: {
         platforms: z.array(z.enum(PLATFORM_NAMES)).optional().describe('Defaults to all platforms'),
         provider: z.string().optional().describe('AI provider id, e.g. anthropic, glm — required if multiple API keys are set'),
