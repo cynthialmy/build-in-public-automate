@@ -3,78 +3,69 @@
 ## Problem
 
 Solo builders sharing progress from the terminal need bip's screenshots and drafts
-to be sharp and reachable from wherever they're already coding, because today the
-capture is a raw full-page dump and bip only exists as a separate CLI session, which
-turns a 30-second update into a manual, context-switching chore — undermining the
-"build in public while building" ease the tool exists to provide.
+to look good and be reachable from wherever they're already coding. Today the
+capture is a raw full-page dump, and bip only exists as a separate CLI session. That
+turns a 30-second update into a manual, context-switching chore.
 
-Signals: real usage (240 weekly npm downloads) but zero GitHub issues/PRs — either the
-current narrow flow works for a slice of users, or friction is going unreported rather
-than requested. This roadmap is built from usage/architecture signals and founder-user
-experience, not verified interviews — worth validating with real users as phases ship.
+Signals: real usage (240 weekly npm downloads) but zero GitHub issues or PRs. Either
+the current narrow flow works for a slice of users, or friction is going unreported.
+This roadmap is built from usage and architecture signals plus founder-user
+experience, not verified interviews. Worth validating with real users as phases ship.
 
 ## Phases
 
-Each phase ships independently; order reflects leverage (small scope, high visible
-win, unlocks the next phase) rather than strict blocking dependencies.
+Each phase ships independently. Order reflects leverage: small scope, high visible
+win, unlocks the next phase.
 
-### Phase 1 — Smarter, platform-aware capture (shipped)
+### Phase 1: Smarter, platform-aware capture (shipped)
 
-`src/capture/screenshot.ts` today: full-page Playwright dump, default viewport, no
-selector targeting, no crop, no retina, `networkidle`-only wait. Zero test coverage.
+Before: full-page Playwright dump, default viewport, no selector targeting, no crop,
+no retina, `networkidle`-only wait, zero test coverage.
 
 - Viewport presets per platform (`og`, `x`, `linkedin`, `reddit`, `hn`, `desktop`,
   `mobile`) instead of one fixed default.
-- Element/selector targeting (`--selector`) — auto-crops to just that element instead
-  of a full-page dump.
+- Element/selector targeting (`--selector`), auto-cropped to just that element.
 - Retina/scale support (`--scale`).
 - Wait strategies beyond `networkidle`: `--wait-for <selector>`, `--delay <ms>`.
-- Test coverage for `capture/` (currently none).
-- Follow-on (shipped): `bip draft`'s and `bip post`'s screenshot-attach prompts now
-  crop to the platform(s) actually being posted to (`PLATFORM_PRESET` mapping in
-  `draft.ts`/`post.ts`) instead of a generic full-page desktop dump.
+- Test coverage for `capture/`.
+- Follow-on (shipped): `bip draft` and `bip post` now crop the attached screenshot
+  to whichever platform the post is actually going to, instead of a generic
+  full-page desktop dump (`PLATFORM_PRESET` in `draft.ts` / `post.ts`).
 
-### Phase 2 — MCP server (shipped, scoped down)
+### Phase 2: MCP server (shipped, scoped down)
 
-`bip mcp` starts a stdio MCP server (`src/mcp/server.ts`) exposing:
+`bip mcp` starts a stdio MCP server (`src/mcp/server.ts`) with:
 
-- `bip_status` / `bip_history` — read-only, no prompts, safe to call freely.
-- `bip_capture_screenshot` — same options as the Phase 1 CLI capture.
-- `bip_draft_preview` — generates post variants from git activity for one or more
-  platforms and returns them as data. Does **not** save or publish.
+- `bip_status` / `bip_history`: read-only, no prompts, safe to call freely.
+- `bip_capture_screenshot`: same options as the Phase 1 CLI capture.
+- `bip_draft_preview`: generates post variants from git activity. Does not save
+  or publish.
 
-Deliberately out of scope for this phase: `bip_post` and a "save this draft" tool.
-`bip draft`/`bip post` are interactive by design (variant picking, edit-in-editor,
-platform-by-platform post/manual/skip choices, credential-backed publishing) — that
-human-in-the-loop review is the point, and an MCP tool that silently posts to X/
-LinkedIn/Reddit/HN on an agent's say-so is a real safety regression, not a
-convenience. Revisit only with an explicit confirmation step designed in, not as a
-default tool call.
+No `bip_post` tool and no way to save a draft over MCP. `bip draft` and `bip post`
+are interactive by design (variant picking, editing, per-platform confirmation
+before publishing), and an MCP tool that could post to a real account on an agent's
+say-so is a safety regression, not a convenience.
 
-Provider selection also can't prompt over MCP: `resolveProviderNonInteractive`
-(`src/mcp/tools.ts`) errors instead of showing an interactive picker when multiple
-AI provider keys are set and none is passed explicitly.
+Provider selection can't prompt over MCP either: `resolveProviderNonInteractive`
+(`src/mcp/tools.ts`) errors instead of showing a picker when multiple provider keys
+exist and none was specified.
 
-### Phase 3 — Claude Code skill / connector (shipped)
+### Phase 3: Claude Code skill (shipped)
 
-`bip init` now scaffolds `.claude/skills/build-in-public/SKILL.md` into every project
-that runs it (from `templates/claude-skill/SKILL.md`, via `scaffoldClaudeSkill` in
-`src/core/claude-skill.ts`) — no extra install step, it rides along with the setup
-everyone already runs. The skill tells Claude Code to prefer the Phase 2 MCP tools
-when connected, fall back to the CLI otherwise, and — critically — never script or
-fake the interactive prompts in `bip draft`/`bip post` to save or publish on the
-user's behalf; that hands back to the human for the actual save/publish step, same
-boundary Phase 2 drew for the MCP tools themselves.
+`bip init` scaffolds `.claude/skills/build-in-public/SKILL.md` into every project
+that runs it, so there's no separate install step. The skill tells Claude Code to
+prefer the Phase 2 MCP tools when connected, fall back to the CLI otherwise, and
+never script or fake the interactive prompts in `bip draft` / `bip post` to save or
+publish on the user's behalf. That step always comes back to the human.
 
-### Phase 4 — Review UX (not a separate web UI)
+### Phase 4: Review UX, not a separate web UI
 
-The problem statement argues against a browser dashboard — that would add a context
-switch, the opposite of what this persona wants. If anything ships here, it's an
-inline review/diff step before posting (e.g. `--dry-run`), not a new app to open.
-Revisit only if users explicitly ask for a UI.
+A browser dashboard would add a context switch, which is the opposite of what this
+persona wants. If anything ships here, it's an inline review step before posting
+(e.g. `--dry-run`), not a new app to open. Revisit only if users ask for a UI.
 
 ## Cross-cutting
 
 Close test-coverage gaps on `capture/`, `auth*`, `draft`, `post`, `evolve`, `init`,
-`soul` while touching them in each phase above — these are exactly the files with
-zero tests today and the ones most affected by this roadmap.
+and `soul` while touching them in each phase above. These are the files with zero
+tests today, and the ones most affected by this roadmap.
