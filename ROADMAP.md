@@ -88,8 +88,45 @@ running, using the model it already has:
 Each command's own key-based path (and `bip_draft_preview` over MCP) stays as the
 fallback for anyone without a coding agent running.
 
+### Phase 6: GIF/video export (shipped)
+
+`bip capture record` only produced webm, which X and LinkedIn don't accept.
+`bip capture record <url> --format mp4` converts the recording to mp4, and
+`--format gif` (with `--gif-width`/`--gif-fps` to tune it) produces a short GIF.
+Both use a system `ffmpeg` binary (`src/capture/convert.ts`), the same pattern
+bip already uses for Playwright's Chromium install rather than bundling a
+WASM encoder, which would bloat the npm package for a feature most captures
+won't use. Plain `bip capture record` (webm) and all screenshots still need
+no extra install.
+
+Recording stays CLI-only, not an MCP tool: starting and stopping are two
+separate interactive steps (open a browser, press Enter to stop), which
+doesn't fit a single stateless tool call the way screenshots do.
+
 ## Cross-cutting
 
-Close test-coverage gaps on `capture/`, `auth*`, `draft`, `post`, `evolve`, `init`,
-and `soul` while touching them in each phase above. These are the files with zero
-tests today, and the ones most affected by this roadmap.
+### Test coverage (shipped)
+
+`capture/recorder.ts`, `commands/{capture,auth,auth-ai,post,mcp,metrics,init,
+evolve,soul,draft}.ts`, and `platforms/{twitter,reddit-client}.ts` had zero
+tests before this pass. All now have real coverage: credential flows, the
+post/publish decision tree (API success, browser fallback, manual export),
+the full interactive draft flow (variant pick/edit/skip, screenshot attach),
+init's project scaffolding, and the evolve/soul context/apply split.
+
+Two things worth knowing if you touch these tests:
+
+- `init.ts` and `evolve.ts`/`soul.ts`'s key-based path read or write
+  `BUILD_IN_PUBLIC.md` and `.gitignore` straight from `process.cwd()`, not
+  under the test-isolated `.buildpublic-test/`. Their tests mock
+  `process.cwd()` itself to a sandboxed subdirectory so they never touch
+  this repo's own files.
+- Platform classes (`TwitterPlatform`, etc.) are instantiated once at
+  module load in `post.ts`/`metrics.ts`, so their tests mock the platform
+  modules with `vi.hoisted()` fixed instances rather than per-test
+  `mockImplementationOnce`.
+
+`platforms/hackernews.ts`, `platforms/linkedin.ts`, `platforms/reddit.ts`,
+and `src/mcp/server.ts` (exercised manually over real JSON-RPC, not by unit
+tests) are still light on coverage. Lower priority: none of them were newly
+introduced by this roadmap.
