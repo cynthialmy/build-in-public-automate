@@ -1,4 +1,5 @@
 import { chromium } from 'playwright';
+import { existsSync } from 'fs';
 import { colors, divider } from '../core/branding.js';
 import { isGitRepo } from '../ai/git.js';
 import { isInitialized } from '../config/settings.js';
@@ -71,9 +72,12 @@ export async function doctorCommand(): Promise<void> {
   }
 
   // 5. Playwright chromium
+  // chromium.executablePath() always returns a computed path string,
+  // installed or not — it never checks the file actually exists, so that
+  // has to be done explicitly or this always reports "installed".
   try {
     const execPath = chromium.executablePath();
-    if (execPath) {
+    if (execPath && existsSync(execPath)) {
       ok('Playwright chromium installed');
     } else {
       fail('Playwright chromium not installed', 'npx playwright install chromium');

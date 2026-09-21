@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import { existsSync } from 'fs';
 import ora from 'ora';
 
 let checkedThisRun = false;
@@ -6,7 +7,12 @@ let checkedThisRun = false;
 async function isInstalled(): Promise<boolean> {
   try {
     const { chromium } = await import('playwright');
-    return !!chromium.executablePath();
+    // chromium.executablePath() always returns a computed path string,
+    // installed or not — it never checks the file actually exists (that
+    // only happens inside Playwright's internal executablePathOrDie(),
+    // used at launch time, not exposed here). Check the file ourselves.
+    const path = chromium.executablePath();
+    return !!path && existsSync(path);
   } catch {
     return false;
   }

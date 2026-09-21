@@ -194,6 +194,17 @@ automatic install itself fails (offline, no permissions), it falls back to
 `chromium.launch()`'s own error, still routed through the existing
 `describeScreenshotError()` message.
 
+**Follow-up fix (0.9.1):** a user upgraded to 0.9.0 and still hit the old
+manual-fix error, on every screenshot, with no "Installing browser..."
+message at all. `chromium.executablePath()` was the bug: it always returns
+a computed path string, installed or not, and never checks the file
+actually exists on disk (that check only happens inside Playwright's
+internal, non-exported `executablePathOrDie()`, used at launch time). The
+check silently reported "installed" every single time regardless of
+reality, so the auto-install never ran. `bip doctor`'s own Chromium check
+had the identical bug, meaning it could report a false "✓ Playwright
+chromium installed" too. Both now also check `existsSync(execPath)`.
+
 ### Phase 11: `bip capture terminal` (shipped)
 
 `bip capture screenshot`/`record` are both Playwright-based: they navigate
