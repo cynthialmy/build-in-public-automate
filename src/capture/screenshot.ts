@@ -1,5 +1,6 @@
 import { mkdirSync, existsSync } from 'fs';
 import { dirname } from 'path';
+import { ensureChromiumInstalled } from './ensure-browser.js';
 
 export type ViewportPreset =
   | 'og'
@@ -61,6 +62,7 @@ export async function captureScreenshot(
   const viewport = VIEWPORT_PRESETS[preset];
   const fullPage = options.fullPage ?? (options.selector ? false : !CARD_PRESETS.has(preset));
 
+  await ensureChromiumInstalled();
   const { chromium } = await import('playwright');
   const browser = await chromium.launch();
   const page = await browser.newPage({

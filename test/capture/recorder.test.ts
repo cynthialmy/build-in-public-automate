@@ -19,7 +19,7 @@ const browserMock = {
 const launchMock = vi.fn().mockResolvedValue(browserMock);
 
 vi.mock('playwright', () => ({
-  chromium: { launch: launchMock },
+  chromium: { launch: launchMock, executablePath: vi.fn().mockReturnValue('/mock/chromium') },
 }));
 
 const VIDEO_DIR = join(process.cwd(), '.buildpublic-test', 'captures');

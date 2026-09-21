@@ -516,6 +516,7 @@ Package name: **`build-in-public`** (`package.json` → `files` ships `dist/`, `
 - **Node.js**: 18+
 - **Either a coding agent** (Claude Code, Cursor, Copilot, Codex) **or at least one LLM API key** for drafting, evolving BUILD_IN_PUBLIC.md, and evolving soul.md. See [AI Drafting](#4-ai-drafting).
 - **`ffmpeg`** only if you use `bip capture record --format mp4` or `--format gif`. Plain `bip capture record` (webm) and all screenshots work without it.
+- **Playwright's Chromium**: installed automatically the first time a screenshot or recording actually runs (one-time, roughly 300MB). No manual step needed.
 
 ## Architecture
 
@@ -551,7 +552,8 @@ src/
 │   └── evolver.ts        # Soul / BUILD_IN_PUBLIC evolution (HTTP)
 ├── capture/
 │   ├── screenshot.ts      # Playwright full-page screenshot
-│   └── recorder.ts        # Playwright video recording
+│   ├── recorder.ts        # Playwright video recording
+│   └── ensure-browser.ts  # Auto-installs Playwright's Chromium on first use
 ├── config/
 │   ├── types.ts          # All shared interfaces
 │   ├── settings.ts       # Read/write .buildpublic/config.json

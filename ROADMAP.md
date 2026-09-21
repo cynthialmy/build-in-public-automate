@@ -96,8 +96,8 @@ fallback for anyone without a coding agent running.
 Both use a system `ffmpeg` binary (`src/capture/convert.ts`), the same pattern
 bip already uses for Playwright's Chromium install rather than bundling a
 WASM encoder, which would bloat the npm package for a feature most captures
-won't use. Plain `bip capture record` (webm) and all screenshots still need
-no extra install.
+won't use. Plain `bip capture record` (webm) and all screenshots don't need
+`ffmpeg` (Chromium itself is handled automatically, see Phase 10).
 
 Recording stays CLI-only, not an MCP tool: starting and stopping are two
 separate interactive steps (open a browser, press Enter to stop), which
@@ -173,6 +173,26 @@ logic into one pass:
 UX moved to `src/core/draft-flow.ts`, so `bip draft` and `bip ship` share one
 implementation instead of two that could drift. `bip draft` and `bip post`
 are unchanged for anyone who prefers the two-step flow.
+
+### Phase 10: Auto-install Playwright's browser (shipped)
+
+First real `bip ship` run on a fresh machine hit this: every screenshot
+attempt failed with "Playwright browser not installed. Run `npx playwright
+install chromium` and try again," four times in a row (once per platform
+preset), because `npm install -g build-in-public` never installed
+Playwright's actual browser binary, only the library. The earlier Phase 6
+note calling this "no extra install" was wrong the moment `bip ship` started
+attempting multiple screenshots in one run instead of the occasional single
+one `bip draft`/`bip post` used to ask for.
+
+`src/capture/ensure-browser.ts` checks whether Chromium is present
+(`chromium.executablePath()`, the same check `bip doctor` already used) and,
+if missing, runs the install for the user before the first screenshot or
+recording in a given process, instead of failing and pointing at a manual
+command. `captureScreenshot()` and `startRecording()` both call it. If the
+automatic install itself fails (offline, no permissions), it falls back to
+`chromium.launch()`'s own error, still routed through the existing
+`describeScreenshotError()` message.
 
 ## Cross-cutting
 
