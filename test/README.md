@@ -22,6 +22,7 @@ test/
 ├── skills/
 ├── platforms/            # x, linkedin, reddit, hackernews
 ├── mcp/                  # MCP server + tool handlers
+├── capture/              # screenshot, recorder, terminal, convert
 └── commands/            # doctor, status, history, feedback, ship
 ```
 

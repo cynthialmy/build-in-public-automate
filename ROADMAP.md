@@ -194,6 +194,36 @@ automatic install itself fails (offline, no permissions), it falls back to
 `chromium.launch()`'s own error, still routed through the existing
 `describeScreenshotError()` message.
 
+### Phase 11: `bip capture terminal` (shipped)
+
+`bip capture screenshot`/`record` are both Playwright-based: they navigate
+a browser to a URL. Neither can capture a CLI tool, which isn't a web page.
+Asked directly by a user: "what if it is a CLI tool?" This is a real gap
+for bip's own stated audience (`BUILD_IN_PUBLIC.md` names CLI/dev-tool
+builders explicitly), and bip itself hit the exact same need earlier this
+session making its own demo GIF (`assets/demo.gif`), where the working
+approach after `vhs` failed silently in this environment was `asciinema`
+(real pty recording) piped through `agg` (asciicast-to-GIF, no browser
+involved).
+
+`src/capture/terminal.ts` follows `ffmpeg`/`convert.ts`'s exact precedent
+for a required system binary: no separate "is it installed" pre-check,
+just spawn and map Node's `ENOENT` error to an actionable install message.
+`bip capture terminal` hands the real terminal to `asciinema rec`
+(inherited stdio) so the user can type a live demo for real, until they
+exit the shell or press Ctrl+D, mirroring `bip capture record <url>`'s "do
+stuff, then stop" shape as closely as a live terminal allows. `--format
+gif` converts the recording afterward via `agg`; a conversion failure is
+reported, not fatal, same precedent as the mp4/gif branch of `bip capture
+record`, since the primary artifact (the `.cast`) already saved
+successfully.
+
+Interactive-only for this pass, deliberately: a scripted/headless mode
+(`bip capture terminal -- <command>`, no live typing, cleaner repeatable
+output) is a natural follow-up but adds real scope (argument parsing with
+a `--` separator, a second recording path to test) that wasn't needed to
+answer what was actually asked.
+
 ## Cross-cutting
 
 ### Test coverage (shipped)

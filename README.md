@@ -52,7 +52,7 @@ Posts improve over time: bip remembers variant preferences, learns editing patte
 - **Project Context**: `BUILD_IN_PUBLIC.md`, skills, and memory injected into prompts
 - **Draft Review**: Two variants per platform, pick/edit/skip, then save or post
 - **Ship**: `bip ship` drafts, screenshots, and packages every platform in one pass, posting only where you agree
-- **Capture**: Platform-sized screenshots (og/x/linkedin/reddit/hn presets, element targeting, retina scale) and browser session recordings, exportable to mp4 or GIF
+- **Capture**: Platform-sized screenshots (og/x/linkedin/reddit/hn presets, element targeting, retina scale) and browser session recordings, exportable to mp4 or GIF, plus live terminal/CLI recordings for tools that aren't web pages
 - **MCP server**: `bip mcp` exposes status/history/capture/draft-preview as MCP tools for Claude Code / Claude Desktop
 - **Feedback**: `bip feedback` rates or reports issues in seconds, no typing required (see [Commands](#commands))
 - **Tests**: Vitest suite under `test/` (see [test/README.md](test/README.md))
@@ -367,6 +367,8 @@ Everything except base instructions is editable by you.
 | `bip capture record <url>` | Record a browser session as webm (press Enter to stop) |
 | `bip capture record <url> --format mp4` | Same, then convert to mp4 (needs `ffmpeg`) |
 | `bip capture record <url> --format gif` | Same, then convert to a GIF (needs `ffmpeg`; `--gif-width`, `--gif-fps` to tune it) |
+| `bip capture terminal` | Record a live CLI/terminal session, not a web page (`exit` or Ctrl+D to stop) |
+| `bip capture terminal --format gif` | Same, then convert to a GIF (needs `agg`; `--theme` to tune it) |
 | `bip mcp` | Start bip as an MCP server (stdio), see [MCP Server](#mcp-server) |
 | `bip feedback` | Rate bip or send feedback, opens a pre-filled GitHub issue |
 | `bip feedback "message"` | Send a message directly, skips the interactive prompt |
@@ -517,6 +519,7 @@ Package name: **`build-in-public`** (`package.json` → `files` ships `dist/`, `
 - **Either a coding agent** (Claude Code, Cursor, Copilot, Codex) **or at least one LLM API key** for drafting, evolving BUILD_IN_PUBLIC.md, and evolving soul.md. See [AI Drafting](#4-ai-drafting).
 - **`ffmpeg`** only if you use `bip capture record --format mp4` or `--format gif`. Plain `bip capture record` (webm) and all screenshots work without it.
 - **Playwright's Chromium**: installed automatically the first time a screenshot or recording actually runs (one-time, roughly 300MB). No manual step needed.
+- **`asciinema`** and, optionally, **`agg`** only if you use `bip capture terminal`. `asciinema` records the session (`brew install asciinema`), `agg` converts it to a GIF with `--format gif` (`brew install agg`). Not needed for any other command.
 
 ## Architecture
 
@@ -553,7 +556,8 @@ src/
 ├── capture/
 │   ├── screenshot.ts      # Playwright full-page screenshot
 │   ├── recorder.ts        # Playwright video recording
-│   └── ensure-browser.ts  # Auto-installs Playwright's Chromium on first use
+│   ├── ensure-browser.ts  # Auto-installs Playwright's Chromium on first use
+│   └── terminal.ts        # asciinema + agg: live CLI/terminal recording, not a web page
 ├── config/
 │   ├── types.ts          # All shared interfaces
 │   ├── settings.ts       # Read/write .buildpublic/config.json
