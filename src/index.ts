@@ -17,6 +17,7 @@ import { evolveCommand } from './commands/evolve.js';
 import {
   captureScreenshotCommand,
   captureRecordCommand,
+  captureTerminalCommand,
 } from './commands/capture.js';
 import { mcpCommand } from './commands/mcp.js';
 import { feedbackCommand } from './commands/feedback.js';
@@ -259,6 +260,18 @@ capture
       return captureRecordCommand(url, options);
     }
   );
+
+capture
+  .command('terminal')
+  .description('Record a live terminal session to asciicast (or GIF)')
+  .option('--format <format>', 'Output format: cast or gif (default: cast). gif needs agg installed')
+  .option('--theme <name>', 'agg color theme for GIF output (e.g. dracula, monokai)')
+  .option('--cols <n>', 'Terminal width in columns (default: 80)')
+  .option('--rows <n>', 'Terminal height in rows (default: 24)')
+  .action((options: { format?: string; theme?: string; cols?: string; rows?: string }) => {
+    track('capture terminal', { format: options.format ?? 'cast' });
+    return captureTerminalCommand(options);
+  });
 
 // bip mcp
 program

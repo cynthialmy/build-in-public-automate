@@ -6,6 +6,12 @@ import { isInitialized, capturesDir, ensureDirectories } from '../config/setting
 import { captureScreenshot, VIEWPORT_PRESETS, type ViewportPreset } from '../capture/screenshot.js';
 import { startRecording, stopRecording } from '../capture/recorder.js';
 import { convertToMp4, convertToGif, describeFfmpegError } from '../capture/convert.js';
+import {
+  recordTerminalSession,
+  convertCastToGif,
+  describeAsciinemaError,
+  describeAggError,
+} from '../capture/terminal.js';
 
 const RECORDING_FORMATS = ['webm', 'mp4', 'gif'] as const;
 type RecordingFormat = (typeof RECORDING_FORMATS)[number];
@@ -124,5 +130,59 @@ export async function captureRecordCommand(
     spinner.fail('Recording failed');
     console.error(err);
     process.exit(1);
+  }
+}
+
+const TERMINAL_FORMATS = ['cast', 'gif'] as const;
+type TerminalFormat = (typeof TERMINAL_FORMATS)[number];
+
+export interface CaptureTerminalCommandOptions {
+  format?: string;
+  theme?: string;
+  cols?: string;
+  rows?: string;
+}
+
+export async function captureTerminalCommand(
+  options: CaptureTerminalCommandOptions = {}
+): Promise<void> {
+  if (!isInitialized()) {
+    console.error('bip is not initialized. Run `bip init` first.');
+    process.exit(1);
+  }
+
+  const format = (options.format ?? 'cast') as TerminalFormat;
+  if (!TERMINAL_FORMATS.includes(format)) {
+    console.error(`Unknown format "${options.format}". Choose one of: ${TERMINAL_FORMATS.join(', ')}`);
+    process.exit(1);
+  }
+
+  ensureDirectories();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const castPath = join(capturesDir(), `terminal-${timestamp}.cast`);
+
+  console.log(chalk.dim('Recording started. Type your demo, then `exit` or Ctrl+D to stop.'));
+  try {
+    await recordTerminalSession(castPath, {
+      cols: options.cols ? Number(options.cols) : undefined,
+      rows: options.rows ? Number(options.rows) : undefined,
+    });
+    console.log(chalk.green(`Saved: ${castPath}`));
+  } catch (err) {
+    console.error(`Recording failed: ${describeAsciinemaError(err)}`);
+    process.exit(1);
+  }
+
+  if (format !== 'gif') return;
+
+  const gifPath = join(capturesDir(), `terminal-${timestamp}.gif`);
+  const spinner = ora('Converting to GIF...').start();
+  try {
+    await convertCastToGif(castPath, gifPath, { theme: options.theme });
+    spinner.succeed(`GIF saved: ${chalk.green(gifPath)}`);
+  } catch (err) {
+    // The .cast already saved successfully, so a GIF conversion failure
+    // is reported, not fatal, same precedent as the mp4/gif branch above.
+    spinner.fail(`GIF conversion failed: ${describeAggError(err)}`);
   }
 }

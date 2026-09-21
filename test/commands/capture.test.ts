@@ -3,7 +3,12 @@ import { ensureDirectories as realEnsureDirectories, writeConfig } from '../../s
 import { captureScreenshot } from '../../src/capture/screenshot.js';
 import { startRecording, stopRecording } from '../../src/capture/recorder.js';
 import { convertToMp4, convertToGif } from '../../src/capture/convert.js';
-import { captureScreenshotCommand, captureRecordCommand } from '../../src/commands/capture.js';
+import { recordTerminalSession, convertCastToGif } from '../../src/capture/terminal.js';
+import {
+  captureScreenshotCommand,
+  captureRecordCommand,
+  captureTerminalCommand,
+} from '../../src/commands/capture.js';
 
 vi.mock('../../src/capture/screenshot.js', async () => {
   const actual = await vi.importActual<typeof import('../../src/capture/screenshot.js')>(
@@ -21,6 +26,13 @@ vi.mock('../../src/capture/convert.js', () => ({
   convertToMp4: vi.fn().mockResolvedValue('/out/recording.mp4'),
   convertToGif: vi.fn().mockResolvedValue('/out/recording.gif'),
   describeFfmpegError: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
+
+vi.mock('../../src/capture/terminal.js', () => ({
+  recordTerminalSession: vi.fn().mockResolvedValue('/out/terminal.cast'),
+  convertCastToGif: vi.fn().mockResolvedValue('/out/terminal.gif'),
+  describeAsciinemaError: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+  describeAggError: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
 
 vi.mock('fs', async () => {
@@ -144,5 +156,83 @@ describe('captureRecordCommand', () => {
     await captureRecordCommand('https://example.com', { format: 'mp4' });
 
     expect(convertToMp4).not.toHaveBeenCalled();
+  });
+});
+
+describe('captureTerminalCommand', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    realEnsureDirectories();
+    writeConfig({
+      projectName: 'test-project',
+      platforms: {},
+      postsDir: '.buildpublic-test/posts',
+      capturesDir: '.buildpublic-test/captures',
+    });
+    vi.mocked(recordTerminalSession).mockResolvedValue('/out/terminal.cast');
+    vi.mocked(convertCastToGif).mockResolvedValue('/out/terminal.gif');
+  });
+
+  it('exits when bip is not initialized', async () => {
+    vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
+      throw exitError(code);
+    });
+    const { rmSync } = await import('fs');
+    rmSync('.buildpublic-test', { recursive: true, force: true });
+
+    await expect(captureTerminalCommand()).rejects.toThrow('process.exit(1)');
+  });
+
+  it('exits on an unknown format without recording', async () => {
+    vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
+      throw exitError(code);
+    });
+
+    await expect(captureTerminalCommand({ format: 'mp4' })).rejects.toThrow('process.exit(1)');
+    expect(recordTerminalSession).not.toHaveBeenCalled();
+  });
+
+  it('records to cast by default and does not attempt GIF conversion', async () => {
+    await captureTerminalCommand();
+
+    expect(recordTerminalSession).toHaveBeenCalledWith(
+      expect.stringContaining('terminal-'),
+      { cols: undefined, rows: undefined }
+    );
+    expect(convertCastToGif).not.toHaveBeenCalled();
+  });
+
+  it('passes cols/rows through to the recorder', async () => {
+    await captureTerminalCommand({ cols: '100', rows: '30' });
+
+    expect(recordTerminalSession).toHaveBeenCalledWith(expect.any(String), { cols: 100, rows: 30 });
+  });
+
+  it('converts to gif when requested', async () => {
+    await captureTerminalCommand({ format: 'gif', theme: 'dracula' });
+
+    expect(convertCastToGif).toHaveBeenCalledWith(
+      expect.stringContaining('terminal-'),
+      expect.stringContaining('.gif'),
+      { theme: 'dracula' }
+    );
+  });
+
+  it('exits when recording fails', async () => {
+    vi.mocked(recordTerminalSession).mockRejectedValue(new Error('spawn asciinema ENOENT'));
+    vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
+      throw exitError(code);
+    });
+
+    await expect(captureTerminalCommand()).rejects.toThrow('process.exit(1)');
+  });
+
+  it('does not exit when GIF conversion fails, since the cast already saved', async () => {
+    vi.mocked(convertCastToGif).mockRejectedValue(new Error('agg failed'));
+    const exitSpy = vi.spyOn(process, 'exit');
+
+    await captureTerminalCommand({ format: 'gif' });
+
+    expect(exitSpy).not.toHaveBeenCalled();
   });
 });
