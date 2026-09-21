@@ -20,8 +20,9 @@ test/
 ├── ai/                # git, drafter, evolver
 ├── memory/
 ├── skills/
-├── platforms/
-└── commands/            # doctor, status, history
+├── platforms/            # x, linkedin, reddit, hackernews
+├── mcp/                  # MCP server + tool handlers
+└── commands/            # doctor, status, history, feedback
 ```
 
 ## Writing tests

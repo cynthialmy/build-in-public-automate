@@ -169,6 +169,9 @@ Two things worth knowing if you touch these tests:
   `mockImplementationOnce`.
 
 `platforms/hackernews.ts`, `platforms/linkedin.ts`, `platforms/reddit.ts`,
-and `src/mcp/server.ts` (exercised manually over real JSON-RPC, not by unit
-tests) are still light on coverage. Lower priority: none of them were newly
-introduced by this roadmap.
+and `src/mcp/server.ts` now have real coverage too (100%, 98.88%, 100%, and
+90% statements respectively): API posting paths, credential-missing errors,
+Playwright browser-fallback login/compose/submit flows, and, for
+`server.ts`, all 10 registered MCP tools verified against a real client over
+`InMemoryTransport` rather than a mocked SDK. Overall suite coverage moved
+from 76.82% to 85.28%.
