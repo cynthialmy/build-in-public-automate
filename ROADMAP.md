@@ -145,6 +145,35 @@ Never git content, drafts, file contents, or credentials.
 - Disabled automatically under `VITEST`, so the test suite never sends
   events or depends on network access.
 
+### Phase 9: `bip ship`, one command instead of two (shipped)
+
+`bip draft` then `bip post` covered the same ground this phase does, but as
+two separate commands, and two things stayed manual every time: screenshots
+needed a URL retyped from scratch on every run with no memory between them,
+and the copy-paste-ready folder (`saveManualExport`, already built for
+`bip post`'s manual fallback) only got created reactively, one platform at a
+time, if you explicitly chose it.
+
+`bip ship` (`src/commands/ship.ts`) wraps the same drafting and posting
+logic into one pass:
+
+- Same per-platform variant picker as `bip draft` (kept deliberately, not
+  redesigned, so the reviewed UX stays familiar).
+- Auto-screenshots once per platform's crop, using a URL saved to
+  `previewUrl` in `.buildpublic/config.json` the first time it's asked for,
+  never re-prompted after that.
+- Always writes a manual-export folder for every accepted platform, so a
+  ready-to-grab package exists by default, not only when the API/browser
+  posting path fails.
+- Posts automatically only where credentials exist and only with agreement,
+  asked per platform, defaulting to no.
+
+`PLATFORM_PRESET` (previously duplicated identically in `draft.ts` and
+`post.ts`) moved to `src/core/platform-presets.ts`, and the variant-picking
+UX moved to `src/core/draft-flow.ts`, so `bip draft` and `bip ship` share one
+implementation instead of two that could drift. `bip draft` and `bip post`
+are unchanged for anyone who prefers the two-step flow.
+
 ## Cross-cutting
 
 ### Test coverage (shipped)

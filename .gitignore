@@ -4,6 +4,7 @@ dist/
 .env
 .env.local
 coverage/
+.DS_Store
 
 # bip's own dogfooded runtime state — never commit this tool's own
 # .buildpublic/ dir (this is what leaked session cookies previously).

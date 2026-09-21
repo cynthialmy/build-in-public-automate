@@ -7,16 +7,17 @@ import { colors } from '../core/branding.js';
 import { isInitialized, postsDir, capturesDir, updateConfig } from '../config/settings.js';
 import { recordPostResult } from '../memory/index.js';
 import { getHeadSha } from '../ai/git.js';
-import { captureScreenshot, describeScreenshotError, type ViewportPreset } from '../capture/screenshot.js';
+import { captureScreenshot, describeScreenshotError } from '../capture/screenshot.js';
+import { PLATFORM_PRESET } from '../core/platform-presets.js';
 import { saveManualExport } from './manual-export.js';
-import type { DraftPost, Platform, PlatformPost } from '../config/types.js';
+import type { DraftPost, Platform, PlatformPost, PostResult } from '../config/types.js';
 import { TwitterPlatform } from '../platforms/twitter.js';
 import { LinkedInPlatform } from '../platforms/linkedin.js';
 import { RedditPlatform } from '../platforms/reddit.js';
 import { HackerNewsPlatform } from '../platforms/hackernews.js';
 import type { IPlatform } from '../platforms/base.js';
 
-const PLATFORMS: Record<Platform, IPlatform> = {
+export const PLATFORMS: Record<Platform, IPlatform> = {
   x: new TwitterPlatform(),
   linkedin: new LinkedInPlatform(),
   reddit: new RedditPlatform(),
@@ -25,14 +26,6 @@ const PLATFORMS: Record<Platform, IPlatform> = {
 
 const X_CHAR_LIMIT = 280;
 const LINKEDIN_WORD_LIMIT = 700;
-
-/** Which capture preset matches each platform's card/preview dimensions. */
-const PLATFORM_PRESET: Record<Platform, ViewportPreset> = {
-  x: 'x',
-  linkedin: 'linkedin',
-  reddit: 'reddit',
-  hackernews: 'hn',
-};
 
 function charCount(post: PlatformPost): string {
   if (post.platform === 'x') {
@@ -94,6 +87,44 @@ async function maybeCaptureScreenshot(platform: Platform): Promise<string[]> {
     spinner.fail(`Screenshot failed: ${describeScreenshotError(err)}`);
     return [];
   }
+}
+
+/**
+ * Tries the platform API first; on failure, asks whether to fall back to
+ * browser automation. Owns the spinner and final success/failure message,
+ * so callers just act on the returned `PostResult`. Shared by `bip post`
+ * and `bip ship`'s auto-post step.
+ */
+export async function attemptPost(
+  post: PlatformPost,
+  attachments: string[],
+  platformImpl: IPlatform
+): Promise<PostResult> {
+  const spinner = ora(`Posting to ${post.platform}...`).start();
+
+  let result = await platformImpl.post(post, attachments);
+
+  if (!result.success) {
+    spinner.warn(`API posting failed: ${result.error}`);
+    const tryBrowser = await confirm({
+      message: 'Try browser automation instead?',
+      default: true,
+    });
+    if (tryBrowser) {
+      spinner.start('Opening browser...');
+      result = await platformImpl.postViaBrowser(post, attachments);
+    }
+  }
+
+  if (result.success) {
+    spinner.succeed(
+      `Posted to ${post.platform}${result.url ? ': ' + chalk.underline(result.url) : ''}`
+    );
+  } else {
+    spinner.fail(`Failed to post to ${post.platform}: ${result.error}`);
+  }
+
+  return result;
 }
 
 function previewPost(post: PlatformPost, isDryRun = false): void {
@@ -208,26 +239,9 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
       continue;
     }
 
-    const spinner = ora(`Posting to ${post.platform}...`).start();
-
-    let result = await platformImpl.post(post, attachments);
-
-    if (!result.success) {
-      spinner.warn(`API posting failed: ${result.error}`);
-      const tryBrowser = await confirm({
-        message: 'Try browser automation instead?',
-        default: true,
-      });
-      if (tryBrowser) {
-        spinner.start('Opening browser...');
-        result = await platformImpl.postViaBrowser(post, attachments);
-      }
-    }
+    const result = await attemptPost(post, attachments, platformImpl);
 
     if (result.success) {
-      spinner.succeed(
-        `Posted to ${post.platform}${result.url ? ': ' + chalk.underline(result.url) : ''}`
-      );
       draft.postedTo.push(post.platform);
       recordPostResult(draft.id, post.platform, true);
       if (result.url) {
@@ -237,7 +251,6 @@ export async function postCommand(platform?: string, options: { dryRun?: boolean
         };
       }
     } else {
-      spinner.fail(`Failed to post to ${post.platform}: ${result.error}`);
       recordPostResult(draft.id, post.platform, false);
 
       // Neither the API nor the browser worked — offer the manual path

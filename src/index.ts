@@ -20,6 +20,7 @@ import {
 } from './commands/capture.js';
 import { mcpCommand } from './commands/mcp.js';
 import { feedbackCommand } from './commands/feedback.js';
+import { shipCommand } from './commands/ship.js';
 import { setTelemetryOptOut, telemetryStatus, trackCommand } from './core/telemetry.js';
 import { colors } from './core/branding.js';
 
@@ -266,6 +267,18 @@ program
   .action(() => {
     track('mcp');
     return mcpCommand();
+  });
+
+// bip ship
+program
+  .command('ship')
+  .description('Draft, screenshot, and package an update for every platform, optionally post it')
+  .option('--platforms <platforms>', 'Comma-separated list of platforms (e.g. x,linkedin)')
+  .option('--provider <id>', 'AI provider when multiple API keys exist (e.g. glm, anthropic, openai)')
+  .option('--focus <text>', 'What this post should emphasize')
+  .action((options: { platforms?: string; provider?: string; focus?: string }) => {
+    track('ship');
+    return shipCommand(options);
   });
 
 // bip feedback
