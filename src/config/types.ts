@@ -55,6 +55,8 @@ export interface BipConfig {
   lastPostedSha?: string;
   /** ISO timestamp of the last successful `bip post`. Drives the cadence nudge. */
   lastPostedAt?: string;
+  /** Saved URL `bip ship` screenshots by default, so it never has to ask twice. */
+  previewUrl?: string;
 }
 
 export interface GitContext {

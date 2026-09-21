@@ -51,6 +51,7 @@ Posts improve over time: bip remembers variant preferences, learns editing patte
 - **Voice**: `bip soul` and `bip soul evolve` refine `soul.md` from your behavior
 - **Project Context**: `BUILD_IN_PUBLIC.md`, skills, and memory injected into prompts
 - **Draft Review**: Two variants per platform, pick/edit/skip, then save or post
+- **Ship**: `bip ship` drafts, screenshots, and packages every platform in one pass, posting only where you agree
 - **Capture**: Platform-sized screenshots (og/x/linkedin/reddit/hn presets, element targeting, retina scale) and browser session recordings, exportable to mp4 or GIF
 - **MCP server**: `bip mcp` exposes status/history/capture/draft-preview as MCP tools for Claude Code / Claude Desktop
 - **Feedback**: `bip feedback` rates or reports issues in seconds, no typing required (see [Commands](#commands))
@@ -225,6 +226,30 @@ Credentials are stored in `.buildpublic/config.json` (automatically gitignored).
 
 ## Workflow
 
+### Ship (draft + screenshot + package, in one command)
+
+```bash
+bip ship
+```
+
+The one-command version of draft, screenshot, and manual-export together, for
+when you just finished coding and want everything ready in one pass:
+
+1. Same drafting flow as `bip draft`: git summary, optional focus, 2 variants
+   per platform, pick/edit/skip.
+2. Screenshots automatically, once per platform's crop, using a URL you save
+   the first time you're asked (`previewUrl` in `.buildpublic/config.json`),
+   never re-prompted after that.
+3. Writes a manual-export folder (text + screenshot) for **every** accepted
+   platform by default, so a ready-to-copy-paste package always exists,
+   whether or not you post automatically next.
+4. For each platform with credentials configured, asks `Post to X now?`
+   (defaults to no), same API-then-browser-fallback behavior as `bip post`.
+
+Prints the package folder path up front and again at the end, so it's usable
+even if you decline every auto-post prompt. `bip draft` and `bip post` still
+work exactly as before if you'd rather do it in two steps.
+
 ### Generate Posts
 
 ```bash
@@ -317,6 +342,7 @@ Everything except base instructions is editable by you.
 | `bip auth ai [provider]` | Save an LLM API key into `.env` (`--list` to show status) |
 | `bip auth <platform>` | Save credentials for `x`, `linkedin`, `reddit`, or `hackernews` |
 | `bip auth --list` | Show credential status for all **social** platforms |
+| `bip ship` | Draft, auto-screenshot, and package every platform in one pass; optionally post |
 | `bip draft` | Generate 2 post variants per platform from git activity (needs an LLM key) |
 | `bip draft --provider <id>` | Force provider when multiple API keys exist |
 | `bip draft --preview` | See one generated post with only an LLM key, no `bip init` needed, nothing saved |
@@ -501,6 +527,7 @@ src/
 │   ├── auth.ts           # Social + AI credential flows
 │   ├── auth-ai.ts        # `bip auth ai` → .env upsert
 │   ├── draft.ts          # AI post generation + review loop
+│   ├── ship.ts           # `bip ship`: draft + screenshot + package + optional post, one command
 │   ├── post.ts           # Publish drafts to platforms
 │   ├── evolve.ts         # Update BUILD_IN_PUBLIC.md
 │   ├── soul.ts           # Voice definition & evolution
@@ -533,7 +560,9 @@ src/
 ├── memory/
 │   └── index.ts          # Posting history, preference tracking, prompt building
 ├── core/
-│   └── telemetry.ts      # Anonymous, opt-out `command_run` events (PostHog)
+│   ├── telemetry.ts      # Anonymous, opt-out `command_run` events (PostHog)
+│   ├── draft-flow.ts     # Shared variant-picking UX (`bip draft` + `bip ship`)
+│   └── platform-presets.ts # Platform → screenshot preset map
 └── skills/
     └── index.ts          # Load platform skills from .buildpublic/skills/
 ```

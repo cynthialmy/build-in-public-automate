@@ -22,7 +22,7 @@ test/
 ├── skills/
 ├── platforms/            # x, linkedin, reddit, hackernews
 ├── mcp/                  # MCP server + tool handlers
-└── commands/            # doctor, status, history, feedback
+└── commands/            # doctor, status, history, feedback, ship
 ```
 
 ## Writing tests
