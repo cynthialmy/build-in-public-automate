@@ -65,7 +65,8 @@ help prioritize what to build next. It never sends git content, drafts, file pat
 credentials, or your email. A random ID identifies your install, not you.
 
 Disable it any time with `bip telemetry off`, or set `BIP_TELEMETRY=0` in your
-environment. Check the current state with `bip telemetry`.
+environment. Check the current state with `bip telemetry`. The random ID and your
+on/off preference live in `~/.buildpublic/telemetry.json`, not in any project directory.
 
 ## Install
 
@@ -504,7 +505,8 @@ src/
 │   ├── history.ts        # Browse past drafts
 │   ├── status.ts         # Project overview
 │   ├── doctor.ts         # Setup diagnostics
-│   └── capture.ts        # Screenshot / video recording
+│   ├── capture.ts        # Screenshot / video recording
+│   └── feedback.ts       # `bip feedback`: rating or message → Formspree/GitHub issue
 ├── platforms/
 │   ├── base.ts           # IPlatform interface + helpers
 │   ├── twitter.ts        # API (twitter-api-v2) + Playwright fallback
@@ -528,6 +530,8 @@ src/
 │   └── env-file.ts       # Upsert keys in project .env
 ├── memory/
 │   └── index.ts          # Posting history, preference tracking, prompt building
+├── core/
+│   └── telemetry.ts      # Anonymous, opt-out `command_run` events (PostHog)
 └── skills/
     └── index.ts          # Load platform skills from .buildpublic/skills/
 ```

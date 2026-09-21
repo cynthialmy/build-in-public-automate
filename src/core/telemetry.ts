@@ -7,7 +7,7 @@ import { colors } from './branding.js';
 
 // Public PostHog project key — write-only, safe to ship in the package (same
 // pattern as PostHog's own browser snippet).
-const POSTHOG_KEY = 'phc_tYMLh3YB9iBKJ3xw3GoYLhVAUFXcyV4zY7yEfwqSFaq6';
+const POSTHOG_KEY = 'phc_scui6voszhYCYvtGmvACoUvmXWhr7zJPz3kp6JF3DRuP';
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
 // One request per event, bounded by TIMEOUT_MS, so a slow/offline network
