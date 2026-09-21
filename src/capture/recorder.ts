@@ -1,5 +1,6 @@
 import { mkdirSync, existsSync } from 'fs';
 import type { Browser, BrowserContext, Page } from 'playwright';
+import { ensureChromiumInstalled } from './ensure-browser.js';
 
 interface RecordingSession {
   browser: Browser;
@@ -19,6 +20,7 @@ export async function startRecording(url: string, videoDir: string): Promise<voi
     mkdirSync(videoDir, { recursive: true });
   }
 
+  await ensureChromiumInstalled();
   const { chromium } = await import('playwright');
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext({
