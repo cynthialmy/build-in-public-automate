@@ -7,6 +7,8 @@
 
 Turn your coding sessions into shareable progress updates, straight from your git history. Works with Claude Code, Cursor, Copilot, Codex, or bip's own LLM key.
 
+![bip demo](assets/demo.gif)
+
 ```bash
 npm install -g build-in-public
 ```
