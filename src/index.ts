@@ -19,9 +19,17 @@ import {
   captureRecordCommand,
 } from './commands/capture.js';
 import { mcpCommand } from './commands/mcp.js';
+import { feedbackCommand } from './commands/feedback.js';
+import { setTelemetryOptOut, telemetryStatus, trackCommand } from './core/telemetry.js';
+import { colors } from './core/branding.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json') as { version: string };
+
+/** Fire-and-forget anonymous usage ping — see `bip telemetry status` / README. */
+function track(command: string, properties: Record<string, string> = {}): void {
+  trackCommand(command, pkg.version, properties);
+}
 
 program
   .name('bip')
@@ -33,7 +41,10 @@ program
   .command('init')
   .description('Initialize bip in the current project')
   .option('--force', 'Reinitialize even if already set up')
-  .action((options: { force?: boolean }) => initCommand(options));
+  .action((options: { force?: boolean }) => {
+    track('init');
+    return initCommand(options);
+  });
 
 // bip auth [platform]
 program
@@ -42,9 +53,10 @@ program
     'Set up credentials: social platforms (x, linkedin, …) or AI keys (`auth ai`)'
   )
   .option('--list', 'Show all platform credential statuses')
-  .action((platform?: string, options: { list?: boolean } = {}) =>
-    authCommand(platform, options)
-  );
+  .action((platform?: string, options: { list?: boolean } = {}) => {
+    track('auth', platform ? { target: platform } : {});
+    return authCommand(platform, options);
+  });
 
 // bip draft
 program
@@ -82,7 +94,13 @@ program
       focus?: string;
       contextOnly?: boolean;
       apply?: string;
-    }) => draftCommand(options)
+    }) => {
+      track('draft', {
+        preview: String(!!options.preview),
+        contextOnly: String(!!options.contextOnly),
+      });
+      return draftCommand(options);
+    }
   );
 
 // bip post [platform]
@@ -90,35 +108,48 @@ program
   .command('post [platform]')
   .description('Publish drafts to social platforms')
   .option('--dry-run', 'Preview posts without publishing')
-  .action((platform?: string, options: { dryRun?: boolean } = {}) =>
-    postCommand(platform, options)
-  );
+  .action((platform?: string, options: { dryRun?: boolean } = {}) => {
+    track('post', { platform: platform ?? 'all', dryRun: String(!!options.dryRun) });
+    return postCommand(platform, options);
+  });
 
 // bip doctor
 program
   .command('doctor')
   .description('Check your bip setup for common issues')
-  .action(() => doctorCommand());
+  .action(() => {
+    track('doctor');
+    return doctorCommand();
+  });
 
 // bip status
 program
   .command('status')
   .description('Show an overview of the current project bip state')
-  .action(() => statusCommand());
+  .action(() => {
+    track('status');
+    return statusCommand();
+  });
 
 // bip history
 program
   .command('history')
   .description('Show past drafts with content previews')
   .option('--limit <n>', 'Number of drafts to show', '10')
-  .action((options: { limit?: string }) => historyCommand(options));
+  .action((options: { limit?: string }) => {
+    track('history');
+    return historyCommand(options);
+  });
 
 // bip metrics
 program
   .command('metrics')
   .description('Show engagement (likes/comments) for previously posted drafts')
   .option('--limit <n>', 'Number of posted drafts to check', '10')
-  .action((options: { limit?: string }) => metricsCommand(options));
+  .action((options: { limit?: string }) => {
+    track('metrics');
+    return metricsCommand(options);
+  });
 
 // bip soul
 const soul = program
@@ -128,7 +159,10 @@ const soul = program
 soul
   .command('init', { isDefault: true })
   .description('Interactive questionnaire to create or re-do soul.md')
-  .action(() => soulCommand());
+  .action(() => {
+    track('soul init');
+    return soulCommand();
+  });
 
 soul
   .command('evolve')
@@ -146,8 +180,10 @@ soul
     'Save a soul.md evolved elsewhere (a text file with the full content). No LLM key needed'
   )
   .action(
-    (options: { provider?: string; contextOnly?: boolean; apply?: string }) =>
-      soulEvolveCommand(options)
+    (options: { provider?: string; contextOnly?: boolean; apply?: string }) => {
+      track('soul evolve', { contextOnly: String(!!options.contextOnly) });
+      return soulEvolveCommand(options);
+    }
   );
 
 // bip evolve
@@ -167,8 +203,10 @@ program
     'Save a BUILD_IN_PUBLIC.md evolved elsewhere (a text file with the full content). No LLM key needed'
   )
   .action(
-    (options: { provider?: string; contextOnly?: boolean; apply?: string }) =>
-      evolveCommand(options)
+    (options: { provider?: string; contextOnly?: boolean; apply?: string }) => {
+      track('evolve', { contextOnly: String(!!options.contextOnly) });
+      return evolveCommand(options);
+    }
   );
 
 // bip capture
@@ -199,7 +237,10 @@ capture
         delay?: string;
         fullPage?: boolean;
       }
-    ) => captureScreenshotCommand(url, options)
+    ) => {
+      track('capture screenshot', { preset: options.preset ?? 'desktop' });
+      return captureScreenshotCommand(url, options);
+    }
   );
 
 capture
@@ -212,15 +253,48 @@ capture
   .option('--gif-width <px>', 'GIF width in pixels, height scales to match (default: 480)')
   .option('--gif-fps <n>', 'GIF frame rate (default: 10)')
   .action(
-    (url: string, options: { format?: string; gifWidth?: string; gifFps?: string }) =>
-      captureRecordCommand(url, options)
+    (url: string, options: { format?: string; gifWidth?: string; gifFps?: string }) => {
+      track('capture record', { format: options.format ?? 'webm' });
+      return captureRecordCommand(url, options);
+    }
   );
 
 // bip mcp
 program
   .command('mcp')
   .description('Start bip as an MCP server (stdio) for Claude Code / Claude Desktop')
-  .action(() => mcpCommand());
+  .action(() => {
+    track('mcp');
+    return mcpCommand();
+  });
+
+// bip feedback
+program
+  .command('feedback [message]')
+  .description('Rate bip or send feedback — opens a pre-filled GitHub issue')
+  .option('--rating <n>', 'Rating from 1-5, skips the interactive prompt')
+  .action((message: string | undefined, options: { rating?: string }) => {
+    track('feedback');
+    return feedbackCommand(message, options, pkg.version);
+  });
+
+// bip telemetry [on|off|status]
+program
+  .command('telemetry [action]')
+  .description('Manage anonymous usage data collection: on, off, or status (default)')
+  .action((action: string | undefined) => {
+    if (action === 'off') {
+      setTelemetryOptOut(true);
+      console.log(colors.success('Telemetry disabled.'));
+    } else if (action === 'on') {
+      setTelemetryOptOut(false);
+      console.log(colors.success('Telemetry enabled. Thanks for helping improve bip.'));
+    } else {
+      const { enabled, distinctId } = telemetryStatus();
+      console.log(`Telemetry: ${enabled ? colors.success('on') : colors.dim('off')}`);
+      console.log(colors.dim(`Anonymous ID: ${distinctId}`));
+    }
+  });
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   const msg = err instanceof Error ? err.message : String(err);

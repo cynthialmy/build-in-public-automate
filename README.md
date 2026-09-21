@@ -51,9 +51,21 @@ Posts improve over time: bip remembers variant preferences, learns editing patte
 - **Draft Review**: Two variants per platform, pick/edit/skip, then save or post
 - **Capture**: Platform-sized screenshots (og/x/linkedin/reddit/hn presets, element targeting, retina scale) and browser session recordings, exportable to mp4 or GIF
 - **MCP server**: `bip mcp` exposes status/history/capture/draft-preview as MCP tools for Claude Code / Claude Desktop
+- **Feedback**: `bip feedback` rates or reports issues in seconds, no typing required (see [Commands](#commands))
 - **Tests**: Vitest suite under `test/` (see [test/README.md](test/README.md))
 
 See [ROADMAP.md](ROADMAP.md) for what's next (smarter capture, MCP server, Claude Code skill).
+
+Found a bug or have a thought on what's working or not? Run `bip feedback`. It takes a rating, a message, or both, and opens a pre-filled GitHub issue for you to review before it's submitted.
+
+### Telemetry
+
+bip sends anonymous usage events (which commands run, on which OS/Node/bip version) to
+help prioritize what to build next. It never sends git content, drafts, file paths,
+credentials, or your email. A random ID identifies your install, not you.
+
+Disable it any time with `bip telemetry off`, or set `BIP_TELEMETRY=0` in your
+environment. Check the current state with `bip telemetry`.
 
 ## Install
 
@@ -327,6 +339,11 @@ Everything except base instructions is editable by you.
 | `bip capture record <url> --format mp4` | Same, then convert to mp4 (needs `ffmpeg`) |
 | `bip capture record <url> --format gif` | Same, then convert to a GIF (needs `ffmpeg`; `--gif-width`, `--gif-fps` to tune it) |
 | `bip mcp` | Start bip as an MCP server (stdio), see [MCP Server](#mcp-server) |
+| `bip feedback` | Rate bip or send feedback, opens a pre-filled GitHub issue |
+| `bip feedback "message"` | Send a message directly, skips the interactive prompt |
+| `bip feedback --rating <1-5>` | Send just a rating, no click needed, sent instantly, no GitHub issue opens |
+| `bip telemetry` | Show whether anonymous usage tracking is on, and your anonymous ID |
+| `bip telemetry off` / `on` | Disable or re-enable anonymous usage tracking |
 
 ## MCP Server
 

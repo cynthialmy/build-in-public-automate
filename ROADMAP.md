@@ -103,6 +103,48 @@ Recording stays CLI-only, not an MCP tool: starting and stopping are two
 separate interactive steps (open a browser, press Enter to stop), which
 doesn't fit a single stateless tool call the way screenshots do.
 
+### Phase 7: Closing the feedback gap (shipped)
+
+Real usage but zero GitHub issues or PRs (see Signals above) meant friction
+was going unreported, not that it didn't exist. `bip feedback` (`src/commands/
+feedback.ts`) gives users a path that takes seconds either way:
+
+- Interactive by default: a 1-5 rating prompt, then an optional free-text
+  prompt, both skippable with enter.
+- `--rating <n>` and a positional message argument skip the corresponding
+  prompt for a one-line, scriptable submission.
+- A rating with no typed message posts straight to a Formspree endpoint,
+  no click and no browser tab, since asking someone to review and submit a
+  GitHub form defeats the point of a one-tap rating.
+- Any typed message, rating or not, opens a pre-filled GitHub issue (title,
+  body, `feedback` label) with bip/Node/OS versions attached, for the user
+  to review and submit themselves rather than send silently on their
+  behalf, matching Phase 2's "publishing always comes back to the human"
+  principle. Written feedback benefits from visible triage; a bare rating
+  doesn't need it.
+
+No separate backend to host: Formspree forwards rating-only submissions to
+email, and GitHub issues are already where this repo's bugs and PRs are
+triaged, so nothing here needs its own upkeep.
+
+### Phase 8: Anonymous usage telemetry (shipped)
+
+`bip feedback` only captures what users choose to report. To see what's
+actually being used without waiting for someone to say so, every command
+sends a fire-and-forget `command_run` event to PostHog (`src/core/
+telemetry.ts`): command name, a few non-identifying flags (e.g. which
+platform, which preset), bip/Node/OS versions, and a random per-install ID.
+Never git content, drafts, file contents, or credentials.
+
+- Opt-out, not opt-in, with a one-time disclosure printed the first time an
+  event would fire, `bip telemetry off`/`on`/status to manage it, and
+  `BIP_TELEMETRY=0` as a scriptable override.
+- The event fires without blocking the command: it doesn't await, so the
+  real command starts immediately, bounded by an internal timeout so a
+  slow or offline network can never hang the CLI on exit.
+- Disabled automatically under `VITEST`, so the test suite never sends
+  events or depends on network access.
+
 ## Cross-cutting
 
 ### Test coverage (shipped)
