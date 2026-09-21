@@ -26,7 +26,7 @@ const newPageMock = vi.fn().mockResolvedValue(page);
 const launchMock = vi.fn().mockResolvedValue({ newPage: newPageMock, close: closeMock });
 
 vi.mock('playwright', () => ({
-  chromium: { launch: launchMock, executablePath: vi.fn().mockReturnValue('/mock/chromium') },
+  chromium: { launch: launchMock, executablePath: vi.fn().mockReturnValue(process.execPath) },
 }));
 
 const OUT_DIR = join(process.cwd(), '.buildpublic-test', 'captures');
